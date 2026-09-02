@@ -30,7 +30,7 @@ watch(grades, (g) => {
   chartPoints.value = [...g]
     .sort((a, b) => new Date(a.correctedAt).getTime() - new Date(b.correctedAt).getTime())
     .map((gr) => ({
-      label: gr.examTitle.slice(0, 12),
+      label: gr.examTitle,
       score: gr.totalScore,
       max: gr.maxScore,
     }))
@@ -58,7 +58,7 @@ watch(grades, (g) => {
 
     <div v-if="chartPoints.length" class="rounded-lg border border-border bg-surface p-5 shadow-sm">
       <h2>Evolução</h2>
-      <div class="mt-4 flex h-44 items-end gap-2">
+      <div class="mt-4 flex h-44 items-end gap-2" @click="console.log(chartPoints)">
         <div v-for="(p, i) in chartPoints" :key="i" class="flex min-w-0 flex-1 flex-col items-center gap-1">
           <div class="w-full min-h-1 rounded-t bg-primary" :style="{ height: `${(p.score / p.max) * 100}px` }" />
           <span class="text-center text-xs text-muted">{{ p.label }}</span>

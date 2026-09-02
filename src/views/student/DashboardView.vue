@@ -21,19 +21,19 @@ onMounted(async () => {
     </div>
 
     <div class="mb-6 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
-      <div class="rounded-lg border border-border bg-page p-4 text-center">
-        <div class="text-2xl font-semibold text-primary">{{ exams.length }}</div>
-        <div class="mt-1 text-xs uppercase tracking-wide text-muted">Provas atribuídas</div>
+      <div class="rounded-lg border border-border bg-surface p-4 text-center">
+        <div class="text-2xl font-semibold text-primary">{{ exams.length || '--' }}</div>
+        <div class="mt-1 text-xs uppercase tracking-wide text-muted font-medium">Provas atribuídas</div>
       </div>
-      <div class="rounded-lg border border-border bg-page p-4 text-center">
-        <div class="text-2xl font-semibold text-primary">{{ grades.length }}</div>
-        <div class="mt-1 text-xs uppercase tracking-wide text-muted">Notas lançadas</div>
+      <div class="rounded-lg border border-border bg-surface p-4 text-center">
+        <div class="text-2xl font-semibold text-primary">{{ grades.length || '--' }}</div>
+        <div class="mt-1 text-xs uppercase tracking-wide text-muted font-medium">Notas lançadas</div>
       </div>
-      <div class="rounded-lg border border-border bg-page p-4 text-center">
+      <div class="rounded-lg border border-border bg-surface p-4 text-center">
         <div class="text-2xl font-semibold text-primary">
-          {{ grades.length ? (grades.reduce((s, g) => s + g.totalScore, 0) / grades.length).toFixed(1) : '—' }}
+          {{ grades.length ? (grades.reduce((s, g) => s + g.totalScore, 0) / grades.length).toFixed(1) : '--' }}
         </div>
-        <div class="mt-1 text-xs uppercase tracking-wide text-muted">Média</div>
+        <div class="mt-1 text-xs uppercase tracking-wide text-muted font-medium">Média</div>
       </div>
     </div>
 

@@ -102,7 +102,7 @@ onMounted(async () => {
         <div class="mb-6 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
           <div class="rounded-lg border border-border bg-page p-4 text-center">
             <div class="text-2xl font-semibold text-primary">{{ report.stats.mean.toFixed(1) }}</div>
-            <div class="mt-1 text-xs uppercase tracking-wide text-muted">Média</div>
+            <div class="mt-1 text-xs uppercase tracking-wide text-muted">Média</div> 
           </div>
           <div class="rounded-lg border border-border bg-page p-4 text-center">
             <div class="text-2xl font-semibold text-primary">{{ report.stats.median.toFixed(1) }}</div>

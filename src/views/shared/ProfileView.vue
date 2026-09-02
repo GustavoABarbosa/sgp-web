@@ -10,6 +10,24 @@ const showAnonymize = ref(false)
 const message = ref('')
 const error = ref('')
 
+const profileData = ref([
+  {
+    icon: 'ph:user',
+    label: 'Nome',
+    value: auth.user?.fullName,
+  },
+  {
+    icon: 'ph:at',
+    label: 'E-mail',
+    value: auth.user?.email,
+  },
+  {
+    icon: 'ph:user-circle',
+    label: 'Tipo',
+    value: auth.user?.role === 'professor' ? 'Professor' : 'Aluno',
+  },
+])
+
 async function logoutAll() {
   await auth.logoutAll()
   router.push('/login')
@@ -39,19 +57,29 @@ function resetMockData() {
     </div>
 
     <div class="rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-        <dt class="font-medium text-muted">Nome</dt>
-        <dd class="m-0">{{ auth.user?.fullName }}</dd>
-        <dt class="font-medium text-muted">E-mail</dt>
-        <dd class="m-0">{{ auth.user?.email }}</dd>
-        <dt class="font-medium text-muted">Tipo</dt>
-        <dd class="m-0">{{ auth.user?.role === 'professor' ? 'Professor' : 'Aluno' }}</dd>
-      </dl>
+      <h2 class="mb-2">Dados pessoais</h2>
+      <div class="grid grid-cols-3 gap-2 text-sm">
+        <div
+          v-for="item in profileData"
+          :key="item.label"
+          class="flex min-w-0 items-center gap-1 overflow-hidden rounded-lg border border-border p-2"
+        >
+          <Icon :name="item.icon" class="size-8 shrink-0 text-muted" />
+          <div class="min-w-0 flex-1">
+            <p class="text-xs leading-tight text-muted">{{ item.label }}</p>
+            <p class="truncate text-xs font-medium leading-tight" :title="String(item.value ?? '')">
+              {{ item.value }}
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h2>Sessões</h2>
-      <p class="mb-3 text-sm text-muted">Encerre todas as sessões ativas em outros dispositivos.</p>
+    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex items-center justify-between">
+      <div>
+        <h2>Sessões</h2>
+        <p class="text-sm text-muted">Encerre todas as sessões ativas em outros dispositivos.</p>
+      </div>
       <button
         class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
         @click="logoutAll"
@@ -60,29 +88,34 @@ function resetMockData() {
       </button>
     </div>
 
-    <div class="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-5 shadow-sm">
-      <h2>Privacidade (LGPD)</h2>
-      <p class="mb-3 text-sm text-muted">
-        Anonimizar sua conta é irreversível. Notas e correções existentes são preservadas,
-        mas seus dados pessoais serão substituídos por placeholders.
-      </p>
+    <div class="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-5 shadow-sm flex items-center justify-between gap-3">
+      <div>
+        <h2>Privacidade (LGPD)</h2>
+        <p class="mb-3 text-sm text-muted">
+          Anonimizar sua conta é irreversível. Notas e correções existentes são preservadas,
+          mas seus dados pessoais serão substituídos por placeholders.
+        </p>
+      </div>
       <button
-        class="inline-flex items-center justify-center rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+        class="shrink-0 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
         @click="showAnonymize = true"
       >
         Anonimizar minha conta
       </button>
     </div>
 
-    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h2>Desenvolvimento</h2>
-      <p class="mb-3 text-sm text-muted">Restaura os dados mock iniciais.</p>
+    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex items-center justify-between">
+      <div>
+        
+        <h2>Desenvolvimento</h2>
+        <p class="mb-3 text-sm text-muted">Restaura os dados mock iniciais.</p>
+      </div>
       <button
-        class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+        class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
         @click="resetMockData"
       >
         Resetar dados mock
-      </button>
+        </button>
       <p v-if="message" class="mt-2 text-sm text-success">{{ message }}</p>
     </div>
 

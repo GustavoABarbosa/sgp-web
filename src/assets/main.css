@@ -25,6 +25,10 @@ button {
   @apply cursor-pointer;
 }
 
+h2 {
+  @apply font-medium
+}
+
 input, textarea, select {
   @apply transition-all duration-200;
   &:focus-visible {
