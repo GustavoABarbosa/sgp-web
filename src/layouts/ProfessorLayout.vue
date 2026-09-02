@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import CatolicaIcon from '@/components/CatolicaIcon.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -30,9 +31,12 @@ async function logout() {
 <template>
   <div class="flex min-h-screen flex-col md:flex-row">
     <aside class="flex w-full shrink-0 flex-col bg-primary py-5 text-white md:w-60">
-      <div class="mb-3 border-b border-white/15 px-5 pb-5">
-        <strong class="block text-lg">SGP Católica</strong>
-        <small class="text-xs opacity-75">Área do Professor</small>
+      <div class="mb-3 flex items-center gap-2 border-b border-white/15 px-5 pb-5">
+        <CatolicaIcon class="h-8 text-white" />
+        <div>
+          <strong class="block text-lg">SGP Católica</strong>
+          <small class="text-xs opacity-75">Área do Professor</small>
+        </div>
       </div>
       <nav class="flex flex-1 flex-row flex-wrap md:flex-col">
         <RouterLink v-for="link in links" :key="link.to" :to="link.to" :class="navLinkClass(link.to)">

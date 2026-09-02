@@ -9,6 +9,7 @@ import {
   getZodFieldErrors,
   objectiveQuestionSchema,
 } from '@/shared/validation'
+import FormField from '@/components/FormField.vue'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 
 function uid(prefix: string) {
@@ -139,42 +140,33 @@ onMounted(load)
 
     <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div class="mb-4">
-          <label class="mb-1.5 block text-sm font-medium">Tipo</label>
-          <select v-model="type" :disabled="isEdit" class="w-full rounded-lg border border-border bg-white px-3 py-2">
-            <option value="objetiva">Objetiva</option>
-            <option value="discursiva">Discursiva</option>
-          </select>
-        </div>
-        <div v-if="type === 'discursiva'" class="mb-4">
-          <label class="mb-1.5 block text-sm font-medium">Pontuação máxima</label>
-          <input
-            v-model.number="maxScore"
-            type="number"
-            min="0.5"
-            step="0.5"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': fieldErrors.maxScore }"
-          />
-          <p v-if="fieldErrors.maxScore" class="mt-1 text-sm text-danger">{{ fieldErrors.maxScore }}</p>
-        </div>
-      </div>
-
-      <div class="mb-4">
-        <label class="mb-1.5 block text-sm font-medium">Enunciado (Markdown básico: **negrito**, *itálico*, `code`)</label>
-        <textarea
-          v-model="statement"
-          rows="4"
-          class="w-full rounded-lg border border-border bg-white px-3 py-2"
-          :class="{ 'border-danger': fieldErrors.statement }"
+        <FormField v-model="type" as="select" label="Tipo" :disabled="isEdit">
+          <option value="objetiva">Objetiva</option>
+          <option value="discursiva">Discursiva</option>
+        </FormField>
+        <FormField
+          v-if="type === 'discursiva'"
+          v-model.number="maxScore"
+          label="Pontuação máxima"
+          type="number"
+          min="0.5"
+          step="0.5"
+          :error="fieldErrors.maxScore"
         />
-        <p v-if="fieldErrors.statement" class="mt-1 text-sm text-danger">{{ fieldErrors.statement }}</p>
       </div>
 
-      <div class="mb-4">
-        <label class="mb-1.5 block text-sm font-medium">Tags (separadas por vírgula)</label>
-        <input v-model="tagsInput" placeholder="matematica, prova1" class="w-full rounded-lg border border-border bg-white px-3 py-2" />
-      </div>
+      <FormField
+        v-model="statement"
+        as="textarea"
+        label="Enunciado (Markdown básico: **negrito**, *itálico*, `code`)"
+        rows="4"
+        :error="fieldErrors.statement"
+      />
+      <FormField
+        v-model="tagsInput"
+        label="Tags (separadas por vírgula)"
+        placeholder="matematica, prova1"
+      />
 
       <div v-if="type === 'objetiva'" class="mb-4">
         <label class="mb-1.5 block text-sm font-medium">Alternativas (2–5)</label>

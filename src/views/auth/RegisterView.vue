@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import type { UserRole } from '@/types'
 import AuthFormHeader from '@/components/AuthFormHeader.vue'
+import FormField from '@/components/FormField.vue'
 import { registerSchema, useZodForm } from '@/shared/validation'
 
 const route = useRoute()
@@ -51,50 +52,34 @@ async function submit() {
       />
 
       <form @submit.prevent="submit">
-        <div class="mb-4">
-          <label for="name" class="mb-1.5 block text-sm font-medium">Nome completo</label>
-          <input
-            id="name"
-            v-model="fields.fullName"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('fullName') }"
-          />
-          <p v-if="errorFor('fullName')" class="mt-1 text-sm text-danger">{{ errorFor('fullName') }}</p>
-        </div>
-        <div class="mb-4">
-          <label for="email" class="mb-1.5 block text-sm font-medium">E-mail</label>
-          <input
-            id="email"
-            v-model="fields.email"
-            type="email"
-            :placeholder="`nome.sobrenome${domainHint}`"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('email') }"
-          />
-          <p v-if="errorFor('email')" class="mt-1 text-sm text-danger">{{ errorFor('email') }}</p>
-        </div>
-        <div class="mb-4">
-          <label for="password" class="mb-1.5 block text-sm font-medium">Senha (mín. 8 caracteres)</label>
-          <input
-            id="password"
-            v-model="fields.password"
-            type="password"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('password') }"
-          />
-          <p v-if="errorFor('password')" class="mt-1 text-sm text-danger">{{ errorFor('password') }}</p>
-        </div>
-        <div class="mb-4">
-          <label for="confirm" class="mb-1.5 block text-sm font-medium">Confirmar senha</label>
-          <input
-            id="confirm"
-            v-model="fields.confirmPassword"
-            type="password"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('confirmPassword') }"
-          />
-          <p v-if="errorFor('confirmPassword')" class="mt-1 text-sm text-danger">{{ errorFor('confirmPassword') }}</p>
-        </div>
+        <FormField
+          id="name"
+          v-model="fields.fullName"
+          label="Nome completo"
+          :error="errorFor('fullName')"
+        />
+        <FormField
+          id="email"
+          v-model="fields.email"
+          label="E-mail"
+          type="email"
+          :placeholder="`nome.sobrenome${domainHint}`"
+          :error="errorFor('email')"
+        />
+        <FormField
+          id="password"
+          v-model="fields.password"
+          label="Senha (mín. 8 caracteres)"
+          type="password"
+          :error="errorFor('password')"
+        />
+        <FormField
+          id="confirm"
+          v-model="fields.confirmPassword"
+          label="Confirmar senha"
+          type="password"
+          :error="errorFor('confirmPassword')"
+        />
         <p v-if="auth.error" class="text-sm text-danger">{{ auth.error }}</p>
         <button
           type="submit"

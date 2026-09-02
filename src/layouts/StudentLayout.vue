@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import CatolicaIcon from '@/components/CatolicaIcon.vue'
+import UserMenu from '@/components/UserMenu.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -8,7 +10,7 @@ const router = useRouter()
 
 const links = [
   { to: '/aluno/dashboard', label: 'Início' },
-  { to: '/aluno/exams', label: 'Minhas Provas' },
+  { to: '/aluno/exams', label: 'Provas' },
   { to: '/aluno/grades', label: 'Notas' },
 ]
 
@@ -27,26 +29,21 @@ async function logout() {
 <template>
   <div class="min-h-screen">
     <header class="flex flex-wrap items-center gap-4 bg-primary px-6 py-3 text-white md:gap-6">
-      <div>
-        <strong class="text-lg">SGP Católica</strong>
-        <span class="hidden md:inline"> — Área do Aluno</span>
+      <div class="flex items-center gap-2">
+        <CatolicaIcon class="h-8 text-white" />
+        <span class="hidden md:inline">SGP Aluno</span>
       </div>
       <nav class="flex flex-1 gap-1">
         <RouterLink v-for="link in links" :key="link.to" :to="link.to" :class="navLinkClass(link.to)">
           {{ link.label }}
         </RouterLink>
       </nav>
-      <div class="flex items-center gap-3">
-        <RouterLink to="/aluno/profile" class="text-sm text-white/90 no-underline">
-          {{ auth.user?.fullName }}
-        </RouterLink>
-        <button
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
-          @click="logout"
-        >
-          Sair
-        </button>
-      </div>
+      <UserMenu
+        v-if="auth.user"
+        :name="auth.user.fullName"
+        profile-to="/aluno/profile"
+        @logout="logout"
+      />
     </header>
     <main class="mx-auto max-w-4xl p-4 md:p-7">
       <RouterView />

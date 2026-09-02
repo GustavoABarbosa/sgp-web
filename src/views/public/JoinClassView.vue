@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { mockApi, isApiError } from '@/mock/mockApi'
 import { useAuthStore } from '@/stores/auth'
+import FormField from '@/components/FormField.vue'
 import { joinClassSchema, useZodForm } from '@/shared/validation'
 
 const router = useRouter()
@@ -51,46 +52,30 @@ async function submit() {
       <p class="mb-6 text-muted">Informe o código de convite recebido do professor</p>
 
       <form @submit.prevent="submit">
-        <div class="mb-4">
-          <label class="mb-1.5 block text-sm font-medium">Código de convite</label>
-          <input
-            v-model="fields.inviteCode"
-            placeholder="WEB2026A"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('inviteCode') }"
-          />
-          <p v-if="errorFor('inviteCode')" class="mt-1 text-sm text-danger">{{ errorFor('inviteCode') }}</p>
-        </div>
-        <div class="mb-4">
-          <label class="mb-1.5 block text-sm font-medium">E-mail (@catolicasc.edu.br)</label>
-          <input
-            v-model="fields.email"
-            type="email"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('email') }"
-          />
-          <p v-if="errorFor('email')" class="mt-1 text-sm text-danger">{{ errorFor('email') }}</p>
-        </div>
+        <FormField
+          v-model="fields.inviteCode"
+          label="Código de convite"
+          placeholder="WEB2026A"
+          :error="errorFor('inviteCode')"
+        />
+        <FormField
+          v-model="fields.email"
+          label="E-mail (@catolicasc.edu.br)"
+          type="email"
+          :error="errorFor('email')"
+        />
         <template v-if="fields.needsRegister">
-          <div class="mb-4">
-            <label class="mb-1.5 block text-sm font-medium">Nome completo</label>
-            <input
-              v-model="fields.fullName"
-              class="w-full rounded-lg border border-border bg-white px-3 py-2"
-              :class="{ 'border-danger': errorFor('fullName') }"
-            />
-            <p v-if="errorFor('fullName')" class="mt-1 text-sm text-danger">{{ errorFor('fullName') }}</p>
-          </div>
-          <div class="mb-4">
-            <label class="mb-1.5 block text-sm font-medium">Senha (mín. 8 caracteres)</label>
-            <input
-              v-model="fields.password"
-              type="password"
-              class="w-full rounded-lg border border-border bg-white px-3 py-2"
-              :class="{ 'border-danger': errorFor('password') }"
-            />
-            <p v-if="errorFor('password')" class="mt-1 text-sm text-danger">{{ errorFor('password') }}</p>
-          </div>
+          <FormField
+            v-model="fields.fullName"
+            label="Nome completo"
+            :error="errorFor('fullName')"
+          />
+          <FormField
+            v-model="fields.password"
+            label="Senha (mín. 8 caracteres)"
+            type="password"
+            :error="errorFor('password')"
+          />
         </template>
         <p v-if="error" class="text-sm text-danger">{{ error }}</p>
         <p v-if="message" class="text-sm text-success">{{ message }}</p>

@@ -3,6 +3,7 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { Class, Exam } from '@/types'
 import { mockApi, isApiError } from '@/mock/mockApi'
+import FormField from '@/components/FormField.vue'
 import { applicationFormSchema, useZodForm } from '@/shared/validation'
 
 const router = useRouter()
@@ -39,30 +40,14 @@ async function submit() {
       <h1 class="mb-0 text-3xl font-semibold">Nova aplicação</h1>
     </div>
     <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
-      <div class="mb-4">
-        <label class="mb-1.5 block text-sm font-medium">Prova</label>
-        <select
-          v-model="fields.examId"
-          class="w-full rounded-lg border border-border bg-white px-3 py-2"
-          :class="{ 'border-danger': errorFor('examId') }"
-        >
-          <option value="" disabled>Selecione...</option>
-          <option v-for="e in exams" :key="e.id" :value="e.id">{{ e.title }} ({{ e.status }})</option>
-        </select>
-        <p v-if="errorFor('examId')" class="mt-1 text-sm text-danger">{{ errorFor('examId') }}</p>
-      </div>
-      <div class="mb-4">
-        <label class="mb-1.5 block text-sm font-medium">Turma</label>
-        <select
-          v-model="fields.classId"
-          class="w-full rounded-lg border border-border bg-white px-3 py-2"
-          :class="{ 'border-danger': errorFor('classId') }"
-        >
-          <option value="" disabled>Selecione...</option>
-          <option v-for="c in classes" :key="c.id" :value="c.id">{{ c.name }} — {{ c.subject }}</option>
-        </select>
-        <p v-if="errorFor('classId')" class="mt-1 text-sm text-danger">{{ errorFor('classId') }}</p>
-      </div>
+      <FormField v-model="fields.examId" as="select" label="Prova" :error="errorFor('examId')">
+        <option value="" disabled>Selecione...</option>
+        <option v-for="e in exams" :key="e.id" :value="e.id">{{ e.title }} ({{ e.status }})</option>
+      </FormField>
+      <FormField v-model="fields.classId" as="select" label="Turma" :error="errorFor('classId')">
+        <option value="" disabled>Selecione...</option>
+        <option v-for="c in classes" :key="c.id" :value="c.id">{{ c.name }} — {{ c.subject }}</option>
+      </FormField>
       <p v-if="error" class="text-sm text-danger">{{ error }}</p>
       <div class="mt-4 flex flex-wrap gap-2">
         <RouterLink

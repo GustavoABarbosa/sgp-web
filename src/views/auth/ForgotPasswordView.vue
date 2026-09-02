@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { mockApi, isApiError } from '@/mock/mockApi'
+import FormField from '@/components/FormField.vue'
 import { forgotPasswordSchema, useZodForm } from '@/shared/validation'
 
 const { fields, validate, errorFor } = useZodForm(forgotPasswordSchema, { email: '' })
@@ -31,17 +32,13 @@ async function submit() {
     <div class="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-sm">
       <h1 class="mb-0 text-3xl font-semibold">Recuperar senha</h1>
       <form class="mt-6" @submit.prevent="submit">
-        <div class="mb-4">
-          <label for="email" class="mb-1.5 block text-sm font-medium">E-mail</label>
-          <input
-            id="email"
-            v-model="fields.email"
-            type="email"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('email') }"
-          />
-          <p v-if="errorFor('email')" class="mt-1 text-sm text-danger">{{ errorFor('email') }}</p>
-        </div>
+        <FormField
+          id="email"
+          v-model="fields.email"
+          label="E-mail"
+          type="email"
+          :error="errorFor('email')"
+        />
         <p v-if="message" class="text-sm text-success">{{ message }}</p>
         <p v-if="error" class="text-sm text-danger">{{ error }}</p>
         <button

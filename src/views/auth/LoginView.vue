@@ -3,6 +3,7 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { DEMO_CREDENTIALS } from '@/mock/initialDb'
 import AuthFormHeader from '@/components/AuthFormHeader.vue'
+import FormField from '@/components/FormField.vue'
 import { loginSchema, useZodForm } from '@/shared/validation'
 
 const auth = useAuthStore()
@@ -37,37 +38,29 @@ function fillDemo(role: 'professor' | 'estudante') {
       <AuthFormHeader title="SGP Católica" description="Sistema de Geração de Provas" logo />
 
       <form @submit.prevent="submit">
-        <div class="mb-4">
-          <label for="email" class="mb-1.5 block text-sm font-medium">E-mail</label>
-          <input
-            id="email"
-            v-model="fields.email"
-            type="email"
-            autocomplete="email"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('email') }"
-          />
-          <p v-if="errorFor('email')" class="mt-1 text-sm text-danger">{{ errorFor('email') }}</p>
-        </div>
-        <div class="mb-4">
-          <label for="password" class="mb-1.5 block text-sm font-medium">Senha</label>
-          <input
-            id="password"
-            v-model="fields.password"
-            type="password"
-            autocomplete="current-password"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('password') }"
-          />
-          <p v-if="errorFor('password')" class="mt-1 text-sm text-danger">{{ errorFor('password') }}</p>
-        </div>
+        <FormField
+          id="email"
+          v-model="fields.email"
+          label="E-mail"
+          type="email"
+          autocomplete="email"
+          :error="errorFor('email')"
+        />
+        <FormField
+          id="password"
+          v-model="fields.password"
+          label="Senha"
+          type="password"
+          autocomplete="current-password"
+          :error="errorFor('password')"
+        />
         <p v-if="auth.error" class="mt-2 text-sm text-danger">{{ auth.error }}</p>
         <button
           type="submit"
           :disabled="auth.loading"
           class="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-55"
         >
-          {{ auth.loading ? 'Entrando...' : 'Entrar' }}
+          {{ auth.loading ? '...' : 'Entrar' }}
         </button>
       </form>
 

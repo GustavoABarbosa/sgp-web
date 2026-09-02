@@ -24,3 +24,10 @@
 button {
   @apply cursor-pointer;
 }
+
+input, textarea, select {
+  @apply transition-all duration-200;
+  &:focus-visible {
+    @apply outline-none;
+  }
+}

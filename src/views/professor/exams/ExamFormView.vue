@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { ExamQuestion, Question } from '@/types'
 import { mockApi, isApiError } from '@/mock/mockApi'
+import FormField from '@/components/FormField.vue'
 import { examFormSchema, getZodFieldErrors } from '@/shared/validation'
 
 const route = useRoute()
@@ -105,19 +106,8 @@ onMounted(load)
     </div>
 
     <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
-      <div class="mb-4">
-        <label class="mb-1.5 block text-sm font-medium">Título</label>
-        <input
-          v-model="title"
-          class="w-full rounded-lg border border-border bg-white px-3 py-2"
-          :class="{ 'border-danger': fieldErrors.title }"
-        />
-        <p v-if="fieldErrors.title" class="mt-1 text-sm text-danger">{{ fieldErrors.title }}</p>
-      </div>
-      <div class="mb-4">
-        <label class="mb-1.5 block text-sm font-medium">Descrição</label>
-        <textarea v-model="description" rows="2" class="w-full rounded-lg border border-border bg-white px-3 py-2" />
-      </div>
+      <FormField v-model="title" label="Título" :error="fieldErrors.title" />
+      <FormField v-model="description" as="textarea" label="Descrição" rows="2" />
 
       <div
         class="mb-4 flex flex-wrap items-center gap-4 rounded-lg bg-page p-3 text-sm"

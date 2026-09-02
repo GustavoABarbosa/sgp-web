@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { mockApi, isApiError } from '@/mock/mockApi'
+import FormField from '@/components/FormField.vue'
 import { resetPasswordSchema, useZodForm } from '@/shared/validation'
 
 const route = useRoute()
@@ -35,28 +36,20 @@ async function submit() {
     <div class="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-sm">
       <h1 class="mb-0 text-3xl font-semibold">Nova senha</h1>
       <form class="mt-6" @submit.prevent="submit">
-        <div class="mb-4">
-          <label for="password" class="mb-1.5 block text-sm font-medium">Nova senha</label>
-          <input
-            id="password"
-            v-model="fields.password"
-            type="password"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('password') }"
-          />
-          <p v-if="errorFor('password')" class="mt-1 text-sm text-danger">{{ errorFor('password') }}</p>
-        </div>
-        <div class="mb-4">
-          <label for="confirm" class="mb-1.5 block text-sm font-medium">Confirmar</label>
-          <input
-            id="confirm"
-            v-model="fields.confirmPassword"
-            type="password"
-            class="w-full rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': errorFor('confirmPassword') }"
-          />
-          <p v-if="errorFor('confirmPassword')" class="mt-1 text-sm text-danger">{{ errorFor('confirmPassword') }}</p>
-        </div>
+        <FormField
+          id="password"
+          v-model="fields.password"
+          label="Nova senha"
+          type="password"
+          :error="errorFor('password')"
+        />
+        <FormField
+          id="confirm"
+          v-model="fields.confirmPassword"
+          label="Confirmar"
+          type="password"
+          :error="errorFor('confirmPassword')"
+        />
         <p v-if="error" class="text-sm text-danger">{{ error }}</p>
         <button
           type="submit"

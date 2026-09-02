@@ -1,4 +1,4 @@
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import type { ZodError, ZodType } from 'zod'
 
 export function getZodFieldErrors(error: ZodError): Partial<Record<string, string>> {
@@ -17,15 +17,21 @@ export function getZodFieldErrors(error: ZodError): Partial<Record<string, strin
 export function useZodForm<T extends Record<string, unknown>>(schema: ZodType<T>, initial: T) {
   const fields = reactive({ ...initial }) as T
   const fieldErrors = ref<Partial<Record<keyof T & string, string>>>({})
+  const hasValidated = ref(false)
 
-  function validate(): T | null {
-    fieldErrors.value = {}
-    const result = schema.safeParse(fields)
-
-    if (result.success) return result.data
+  function applyValidationResult(result: ReturnType<ZodType<T>['safeParse']>): T | null {
+    if (result.success) {
+      fieldErrors.value = {}
+      return result.data
+    }
 
     fieldErrors.value = getZodFieldErrors(result.error) as Partial<Record<keyof T & string, string>>
     return null
+  }
+
+  function validate(): T | null {
+    hasValidated.value = true
+    return applyValidationResult(schema.safeParse(fields))
   }
 
   function errorFor(key: keyof T & string): string {
@@ -34,7 +40,17 @@ export function useZodForm<T extends Record<string, unknown>>(schema: ZodType<T>
 
   function clearErrors() {
     fieldErrors.value = {}
+    hasValidated.value = false
   }
+
+  watch(
+    fields,
+    () => {
+      if (!hasValidated.value) return
+      applyValidationResult(schema.safeParse(fields))
+    },
+    { deep: true },
+  )
 
   return { fields, fieldErrors, validate, errorFor, clearErrors }
 }

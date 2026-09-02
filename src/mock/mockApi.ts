@@ -45,7 +45,7 @@ function uid(prefix: string) {
   return `${prefix}-${crypto.randomUUID().slice(0, 8)}`
 }
 
-function delay(ms = 200) {
+function delay(ms = 500) {
   return new Promise((r) => setTimeout(r, ms))
 }
 

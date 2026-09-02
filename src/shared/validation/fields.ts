@@ -1,17 +1,12 @@
 import { z } from 'zod'
 
-export const emailSchema = z.string().trim().min(1, 'Informe o e-mail').email('E-mail inválido')
+function REQUIRED(field: string) {
+  return `O campo ${field} é obrigatório`
+}
 
-export const passwordSchema = z
-  .string()
-  .min(1, 'Informe a senha')
-  .min(8, 'Senha deve ter no mínimo 8 caracteres')
-
-export const fullNameSchema = z
-  .string()
-  .trim()
-  .min(1, 'Informe o nome completo')
-  .min(3, 'Nome deve ter no mínimo 3 caracteres')
+export const emailSchema = z.email('E-mail inválido').min(1, REQUIRED('e-mail'))
+export const passwordSchema = z.string().min(8, REQUIRED('senha'))
+export const fullNameSchema = z.string().min(3, REQUIRED('nome completo'))
 
 export function emailWithDomain(domain: string) {
   return emailSchema.refine((value) => value.endsWith(domain), {
