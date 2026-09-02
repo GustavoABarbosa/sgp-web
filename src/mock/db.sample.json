@@ -1,0 +1,79 @@
+{
+  "users": [
+    {
+      "id": "usr-teacher-001",
+      "role": "professor",
+      "fullName": "Prof. Ana Silva",
+      "email": "professor1@catolicasc.org.br",
+      "createdAt": "2026-01-15T10:00:00.000Z"
+    },
+    {
+      "id": "usr-student-001",
+      "role": "estudante",
+      "fullName": "Aluno 1 Teste",
+      "email": "aluno1@catolicasc.edu.br",
+      "createdAt": "2026-02-01T10:00:00.000Z"
+    }
+  ],
+  "questions": [
+    {
+      "id": "q-001",
+      "teacherId": "usr-teacher-001",
+      "type": "objetiva",
+      "statement": "Qual é a capital do **Brasil**?",
+      "tags": ["geografia", "brasil"],
+      "alternatives": [
+        { "id": "q-001-a", "text": "São Paulo" },
+        { "id": "q-001-b", "text": "Brasília" },
+        { "id": "q-001-c", "text": "Rio de Janeiro" },
+        { "id": "q-001-d", "text": "Salvador" }
+      ],
+      "correctAlternativeId": "q-001-b"
+    }
+  ],
+  "classes": [
+    {
+      "id": "cls-001",
+      "teacherId": "usr-teacher-001",
+      "name": "Turma A - Programação Web",
+      "subject": "Programação Web",
+      "term": "2026/1",
+      "status": "active",
+      "inviteCode": "WEB2026A",
+      "createdAt": "2026-02-10T08:00:00.000Z"
+    }
+  ],
+  "exams": [
+    {
+      "id": "exam-001",
+      "teacherId": "usr-teacher-001",
+      "title": "Prova 1 - Fundamentos Web",
+      "status": "ready",
+      "questions": [
+        { "questionId": "q-001", "order": 1, "score": 2 }
+      ]
+    }
+  ],
+  "applications": [
+    {
+      "id": "app-001",
+      "examId": "exam-001",
+      "classId": "cls-001",
+      "teacherId": "usr-teacher-001",
+      "status": "generated",
+      "pdfUrl": "/mock/prova-consolidada.pdf"
+    }
+  ],
+  "corrections": [
+    {
+      "id": "cor-001",
+      "examVersionId": "ver-001",
+      "applicationId": "app-001",
+      "studentId": "usr-student-001",
+      "totalScore": 8,
+      "isAutomaticallyAssigned": true,
+      "syncStatus": "synced"
+    }
+  ],
+  "_note": "Amostra reduzida. Dados completos em src/mock/initialDb.ts"
+}

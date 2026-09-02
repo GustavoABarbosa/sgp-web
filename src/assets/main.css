@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary: #9d2235;
+  --color-primary-light: #ca2f43;
+  --color-accent: #c8a415;
+  --color-page: #f4f6f9;
+  --color-surface: #ffffff;
+  --color-border: #dde3ec;
+  --color-text: #1a2332;
+  --color-muted: #5c6b7a;
+  --color-danger: #c0392b;
+  --color-success: #1e7e4a;
+  --color-warning: #b86e00;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+@layer base {
+  body {
+    @apply m-0 bg-page text-text font-sans leading-normal antialiased;
+  }
+}
+
+button {
+  @apply cursor-pointer;
+}
