@@ -2,17 +2,23 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { mockApi, isApiError } from '@/mock/mockApi'
+import { classFormSchema, useZodForm } from '@/shared/validation'
 
 const router = useRouter()
-const name = ref('')
-const subject = ref('')
-const term = ref('2026/1')
+const { fields, validate, errorFor } = useZodForm(classFormSchema, {
+  name: '',
+  subject: '',
+  term: '2026/1',
+})
 const error = ref('')
 
 async function submit() {
   error.value = ''
+  const data = validate()
+  if (!data) return
+
   try {
-    const cls = await mockApi.createClass({ name: name.value, subject: subject.value, term: term.value })
+    const cls = await mockApi.createClass(data)
     router.push(`/professor/classes/${cls.id}`)
   } catch (e) {
     error.value = isApiError(e) ? e.message : 'Erro'
@@ -28,15 +34,31 @@ async function submit() {
     <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
       <div class="mb-4">
         <label class="mb-1.5 block text-sm font-medium">Nome</label>
-        <input v-model="name" required class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+        <input
+          v-model="fields.name"
+          class="w-full rounded-lg border border-border bg-white px-3 py-2"
+          :class="{ 'border-danger': errorFor('name') }"
+        />
+        <p v-if="errorFor('name')" class="mt-1 text-sm text-danger">{{ errorFor('name') }}</p>
       </div>
       <div class="mb-4">
         <label class="mb-1.5 block text-sm font-medium">Disciplina</label>
-        <input v-model="subject" required class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+        <input
+          v-model="fields.subject"
+          class="w-full rounded-lg border border-border bg-white px-3 py-2"
+          :class="{ 'border-danger': errorFor('subject') }"
+        />
+        <p v-if="errorFor('subject')" class="mt-1 text-sm text-danger">{{ errorFor('subject') }}</p>
       </div>
       <div class="mb-4">
         <label class="mb-1.5 block text-sm font-medium">Período / Ano letivo</label>
-        <input v-model="term" required placeholder="2026/1" class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+        <input
+          v-model="fields.term"
+          placeholder="2026/1"
+          class="w-full rounded-lg border border-border bg-white px-3 py-2"
+          :class="{ 'border-danger': errorFor('term') }"
+        />
+        <p v-if="errorFor('term')" class="mt-1 text-sm text-danger">{{ errorFor('term') }}</p>
       </div>
       <p v-if="error" class="text-sm text-danger">{{ error }}</p>
       <div class="mt-4 flex flex-wrap gap-2">

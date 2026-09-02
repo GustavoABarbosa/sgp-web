@@ -4,6 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 import type { QuestionAlternative } from '@/types'
 import { mockApi, isApiError } from '@/mock/mockApi'
 import { renderMarkdown } from '@/shared/utils'
+import {
+  discursiveQuestionSchema,
+  getZodFieldErrors,
+  objectiveQuestionSchema,
+} from '@/shared/validation'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 
 function uid(prefix: string) {
@@ -15,6 +20,7 @@ const router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 const loading = ref(false)
 const error = ref('')
+const fieldErrors = ref<Partial<Record<string, string>>>({})
 
 const type = ref<'objetiva' | 'discursiva'>('objetiva')
 const statement = ref('')
@@ -63,13 +69,25 @@ async function load() {
 
 async function submit() {
   error.value = ''
+  fieldErrors.value = {}
   const tags = tagsInput.value.split(',').map((t) => t.trim()).filter(Boolean)
+
   try {
     if (type.value === 'objetiva') {
-      if (!correctId.value) {
-        error.value = 'Selecione a alternativa correta'
+      const parsed = objectiveQuestionSchema.safeParse({
+        type: 'objetiva',
+        statement: statement.value,
+        tags,
+        alternatives: alternatives.value,
+        correctAlternativeId: correctId.value,
+      })
+
+      if (!parsed.success) {
+        fieldErrors.value = getZodFieldErrors(parsed.error)
+        error.value = parsed.error.issues[0]?.message ?? 'Dados inválidos'
         return
       }
+
       const idMap = new Map<string, string>()
       const alts = alternatives.value.map((a) => {
         const newId = a.id.startsWith('new-') ? uid('alt') : a.id
@@ -78,16 +96,29 @@ async function submit() {
       })
       const mappedCorrect = idMap.get(correctId.value) ?? correctId.value
       const data = {
-        type: type.value as 'objetiva',
-        statement: statement.value,
-        tags,
+        type: 'objetiva' as const,
+        statement: parsed.data.statement,
+        tags: parsed.data.tags,
         alternatives: alts,
         correctAlternativeId: mappedCorrect,
       }
       if (isEdit.value) await mockApi.updateQuestion(String(route.params.id), data)
       else await mockApi.createQuestion(data)
     } else {
-      const data = { type: type.value, statement: statement.value, tags, maxScore: maxScore.value }
+      const parsed = discursiveQuestionSchema.safeParse({
+        type: 'discursiva',
+        statement: statement.value,
+        tags,
+        maxScore: maxScore.value,
+      })
+
+      if (!parsed.success) {
+        fieldErrors.value = getZodFieldErrors(parsed.error)
+        error.value = parsed.error.issues[0]?.message ?? 'Dados inválidos'
+        return
+      }
+
+      const data = parsed.data
       if (isEdit.value) await mockApi.updateQuestion(String(route.params.id), data)
       else await mockApi.createQuestion(data)
     }
@@ -117,13 +148,27 @@ onMounted(load)
         </div>
         <div v-if="type === 'discursiva'" class="mb-4">
           <label class="mb-1.5 block text-sm font-medium">Pontuação máxima</label>
-          <input v-model.number="maxScore" type="number" min="0.5" step="0.5" class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+          <input
+            v-model.number="maxScore"
+            type="number"
+            min="0.5"
+            step="0.5"
+            class="w-full rounded-lg border border-border bg-white px-3 py-2"
+            :class="{ 'border-danger': fieldErrors.maxScore }"
+          />
+          <p v-if="fieldErrors.maxScore" class="mt-1 text-sm text-danger">{{ fieldErrors.maxScore }}</p>
         </div>
       </div>
 
       <div class="mb-4">
         <label class="mb-1.5 block text-sm font-medium">Enunciado (Markdown básico: **negrito**, *itálico*, `code`)</label>
-        <textarea v-model="statement" required rows="4" class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+        <textarea
+          v-model="statement"
+          rows="4"
+          class="w-full rounded-lg border border-border bg-white px-3 py-2"
+          :class="{ 'border-danger': fieldErrors.statement }"
+        />
+        <p v-if="fieldErrors.statement" class="mt-1 text-sm text-danger">{{ fieldErrors.statement }}</p>
       </div>
 
       <div class="mb-4">
@@ -134,7 +179,12 @@ onMounted(load)
       <div v-if="type === 'objetiva'" class="mb-4">
         <label class="mb-1.5 block text-sm font-medium">Alternativas (2–5)</label>
         <div v-for="alt in alternatives" :key="alt.id" class="mb-2 flex flex-wrap items-center gap-2">
-          <input v-model="alt.text" required placeholder="Texto da alternativa" class="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2" />
+          <input
+            v-model="alt.text"
+            placeholder="Texto da alternativa"
+            class="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2"
+            :class="{ 'border-danger': fieldErrors.alternatives }"
+          />
           <label class="flex items-center gap-1.5 whitespace-nowrap text-sm">
             <input v-model="correctId" type="radio" :value="alt.id" /> Correta
           </label>
@@ -146,6 +196,8 @@ onMounted(load)
             −
           </button>
         </div>
+        <p v-if="fieldErrors.alternatives" class="text-sm text-danger">{{ fieldErrors.alternatives }}</p>
+        <p v-if="fieldErrors.correctAlternativeId" class="text-sm text-danger">{{ fieldErrors.correctAlternativeId }}</p>
         <button
           v-if="alternatives.length < 5"
           type="button"

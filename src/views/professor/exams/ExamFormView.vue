@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { ExamQuestion, Question } from '@/types'
 import { mockApi, isApiError } from '@/mock/mockApi'
+import { examFormSchema, getZodFieldErrors } from '@/shared/validation'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,6 +15,7 @@ const selectedQuestions = ref<ExamQuestion[]>([])
 const availableQuestions = ref<Question[]>([])
 const targetTotal = ref(10)
 const error = ref('')
+const fieldErrors = ref<Partial<Record<string, string>>>({})
 
 const totalScore = computed(() => selectedQuestions.value.reduce((s, q) => s + q.score, 0))
 const scoreWarning = computed(() => Math.abs(totalScore.value - targetTotal.value) > 0.01)
@@ -34,6 +36,7 @@ function addQuestion(q: Question) {
     return
   }
   if (selectedQuestions.value.some((x) => x.questionId === q.id)) return
+  error.value = ''
   selectedQuestions.value.push({
     questionId: q.id,
     order: selectedQuestions.value.length + 1,
@@ -68,12 +71,22 @@ function questionLabel(id: string) {
 
 async function submit() {
   error.value = ''
-  if (!selectedQuestions.value.length) {
-    error.value = 'Adicione ao menos uma questão'
+  fieldErrors.value = {}
+
+  const result = examFormSchema.safeParse({
+    title: title.value,
+    description: description.value,
+    questions: selectedQuestions.value,
+  })
+
+  if (!result.success) {
+    fieldErrors.value = getZodFieldErrors(result.error)
+    error.value = result.error.issues[0]?.message ?? 'Dados inválidos'
     return
   }
+
   try {
-    const payload = { title: title.value, description: description.value, questions: selectedQuestions.value }
+    const payload = result.data
     if (isEdit.value) await mockApi.updateExam(String(route.params.id), payload)
     else await mockApi.createExam(payload)
     router.push('/professor/exams')
@@ -94,7 +107,12 @@ onMounted(load)
     <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
       <div class="mb-4">
         <label class="mb-1.5 block text-sm font-medium">Título</label>
-        <input v-model="title" required class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+        <input
+          v-model="title"
+          class="w-full rounded-lg border border-border bg-white px-3 py-2"
+          :class="{ 'border-danger': fieldErrors.title }"
+        />
+        <p v-if="fieldErrors.title" class="mt-1 text-sm text-danger">{{ fieldErrors.title }}</p>
       </div>
       <div class="mb-4">
         <label class="mb-1.5 block text-sm font-medium">Descrição</label>

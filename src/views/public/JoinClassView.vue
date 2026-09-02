@@ -3,25 +3,31 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { mockApi, isApiError } from '@/mock/mockApi'
 import { useAuthStore } from '@/stores/auth'
+import { joinClassSchema, useZodForm } from '@/shared/validation'
 
 const router = useRouter()
 const auth = useAuthStore()
-const inviteCode = ref('')
-const email = ref('')
-const fullName = ref('')
-const password = ref('')
-const needsRegister = ref(false)
+const { fields, validate, errorFor } = useZodForm(joinClassSchema, {
+  inviteCode: '',
+  email: '',
+  fullName: '',
+  password: '',
+  needsRegister: false,
+})
 const error = ref('')
 const message = ref('')
 
 async function submit() {
   error.value = ''
+  const data = validate()
+  if (!data) return
+
   try {
     const res = await mockApi.joinByCode(
-      inviteCode.value.toUpperCase(),
-      email.value,
-      needsRegister.value ? fullName.value : undefined,
-      needsRegister.value ? password.value : undefined,
+      data.inviteCode,
+      data.email,
+      data.needsRegister ? data.fullName : undefined,
+      data.needsRegister ? data.password : undefined,
     )
     if (res.tokens) {
       auth.setUser(res.user)
@@ -32,7 +38,7 @@ async function submit() {
     setTimeout(() => router.push('/aluno/dashboard'), 1500)
   } catch (e) {
     const msg = isApiError(e) ? e.message : 'Erro'
-    if (msg.includes('Informe nome')) needsRegister.value = true
+    if (msg.includes('Informe nome')) fields.needsRegister = true
     error.value = msg
   }
 }
@@ -48,24 +54,42 @@ async function submit() {
         <div class="mb-4">
           <label class="mb-1.5 block text-sm font-medium">Código de convite</label>
           <input
-            v-model="inviteCode"
-            required
+            v-model="fields.inviteCode"
             placeholder="WEB2026A"
             class="w-full rounded-lg border border-border bg-white px-3 py-2"
+            :class="{ 'border-danger': errorFor('inviteCode') }"
           />
+          <p v-if="errorFor('inviteCode')" class="mt-1 text-sm text-danger">{{ errorFor('inviteCode') }}</p>
         </div>
         <div class="mb-4">
           <label class="mb-1.5 block text-sm font-medium">E-mail (@catolicasc.edu.br)</label>
-          <input v-model="email" type="email" required class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+          <input
+            v-model="fields.email"
+            type="email"
+            class="w-full rounded-lg border border-border bg-white px-3 py-2"
+            :class="{ 'border-danger': errorFor('email') }"
+          />
+          <p v-if="errorFor('email')" class="mt-1 text-sm text-danger">{{ errorFor('email') }}</p>
         </div>
-        <template v-if="needsRegister">
+        <template v-if="fields.needsRegister">
           <div class="mb-4">
             <label class="mb-1.5 block text-sm font-medium">Nome completo</label>
-            <input v-model="fullName" required class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+            <input
+              v-model="fields.fullName"
+              class="w-full rounded-lg border border-border bg-white px-3 py-2"
+              :class="{ 'border-danger': errorFor('fullName') }"
+            />
+            <p v-if="errorFor('fullName')" class="mt-1 text-sm text-danger">{{ errorFor('fullName') }}</p>
           </div>
           <div class="mb-4">
             <label class="mb-1.5 block text-sm font-medium">Senha (mín. 8 caracteres)</label>
-            <input v-model="password" type="password" minlength="8" required class="w-full rounded-lg border border-border bg-white px-3 py-2" />
+            <input
+              v-model="fields.password"
+              type="password"
+              class="w-full rounded-lg border border-border bg-white px-3 py-2"
+              :class="{ 'border-danger': errorFor('password') }"
+            />
+            <p v-if="errorFor('password')" class="mt-1 text-sm text-danger">{{ errorFor('password') }}</p>
           </div>
         </template>
         <p v-if="error" class="text-sm text-danger">{{ error }}</p>

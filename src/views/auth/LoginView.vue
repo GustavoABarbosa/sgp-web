@@ -1,19 +1,23 @@
 <script setup lang="ts">
-import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { DEMO_CREDENTIALS } from '@/mock/initialDb'
-
-const logoUrl = '/images/catolicaLogo.svg'
+import AuthFormHeader from '@/components/AuthFormHeader.vue'
+import { loginSchema, useZodForm } from '@/shared/validation'
 
 const auth = useAuthStore()
 const router = useRouter()
-const email = ref('')
-const password = ref('')
+const { fields, validate, errorFor } = useZodForm(loginSchema, {
+  email: '',
+  password: '',
+})
 
 async function submit() {
+  const data = validate()
+  if (!data) return
+
   try {
-    await auth.login(email.value, password.value)
+    await auth.login(data.email, data.password)
     router.push(auth.isProfessor ? '/professor/dashboard' : '/aluno/dashboard')
   } catch {
     /* error in store */
@@ -22,44 +26,40 @@ async function submit() {
 
 function fillDemo(role: 'professor' | 'estudante') {
   const cred = DEMO_CREDENTIALS[role]
-  email.value = cred.email
-  password.value = cred.password
+  fields.email = cred.email
+  fields.password = cred.password
 }
 </script>
 
 <template>
   <div class="flex min-h-screen items-center justify-center bg-linear-to-br from-primary to-primary-light p-4">
     <div class="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <div class="flex items-center gap-2 mb-6">
-        <img :src="logoUrl" alt="SGP Católica" />
-        <div>
-          <h1 class="mb-0 text-3xl font-semibold">SGP Católica</h1>
-          <p class="text-muted">Sistema de Geração de Provas</p>
-        </div>
-      </div>
+      <AuthFormHeader title="SGP Católica" description="Sistema de Geração de Provas" logo />
 
       <form @submit.prevent="submit">
         <div class="mb-4">
           <label for="email" class="mb-1.5 block text-sm font-medium">E-mail</label>
           <input
             id="email"
-            v-model="email"
+            v-model="fields.email"
             type="email"
-            required
             autocomplete="email"
             class="w-full rounded-lg border border-border bg-white px-3 py-2"
+            :class="{ 'border-danger': errorFor('email') }"
           />
+          <p v-if="errorFor('email')" class="mt-1 text-sm text-danger">{{ errorFor('email') }}</p>
         </div>
         <div class="mb-4">
           <label for="password" class="mb-1.5 block text-sm font-medium">Senha</label>
           <input
             id="password"
-            v-model="password"
+            v-model="fields.password"
             type="password"
-            required
             autocomplete="current-password"
             class="w-full rounded-lg border border-border bg-white px-3 py-2"
+            :class="{ 'border-danger': errorFor('password') }"
           />
+          <p v-if="errorFor('password')" class="mt-1 text-sm text-danger">{{ errorFor('password') }}</p>
         </div>
         <p v-if="auth.error" class="mt-2 text-sm text-danger">{{ auth.error }}</p>
         <button
