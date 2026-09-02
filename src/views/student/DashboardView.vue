@@ -20,7 +20,7 @@ onMounted(async () => {
       <h1 class="mb-0 text-3xl font-semibold">Olá, {{ auth.user?.fullName?.split(' ')[0] }}</h1>
     </div>
 
-    <div class="mb-6 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
+    <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="rounded-lg border border-border bg-surface p-4 text-center">
         <div class="text-2xl font-semibold text-primary">{{ exams.length || '--' }}</div>
         <div class="mt-1 text-xs uppercase tracking-wide text-muted font-medium">Provas atribuídas</div>

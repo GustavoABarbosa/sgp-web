@@ -6,10 +6,12 @@ import type { UserRole } from '@/types'
 import AuthFormHeader from '@/components/AuthFormHeader.vue'
 import FormField from '@/components/FormField.vue'
 import { registerSchema, useZodForm } from '@/shared/validation'
+import { useToast } from '@/shared/useToast'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const toast = useToast()
 
 const role = computed(() => route.params.role as UserRole)
 const isProfessor = computed(() => role.value === 'professor')
@@ -35,9 +37,10 @@ async function submit() {
       email: data.email,
       password: data.password,
     })
+    toast.success('Conta criada com sucesso.')
     router.push(isProfessor.value ? '/professor/dashboard' : '/aluno/dashboard')
   } catch {
-    /* store error */
+    toast.error(auth.error ?? 'Erro ao cadastrar')
   }
 }
 </script>
@@ -56,6 +59,7 @@ async function submit() {
           id="name"
           v-model="fields.fullName"
           label="Nome completo"
+          placeholder="Nome e sobrenome"
           :error="errorFor('fullName')"
         />
         <FormField
@@ -80,7 +84,6 @@ async function submit() {
           type="password"
           :error="errorFor('confirmPassword')"
         />
-        <p v-if="auth.error" class="text-sm text-danger">{{ auth.error }}</p>
         <button
           type="submit"
           :disabled="auth.loading"

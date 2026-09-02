@@ -16,7 +16,7 @@ const links = [
 
 const navLinkClass = (path: string) =>
   [
-    'rounded-lg px-3 py-1.5 text-sm text-white/85 no-underline hover:bg-white/15 hover:text-white',
+    'rounded-lg px-1 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-white/85 no-underline hover:bg-white/15 hover:text-white',
     route.path.startsWith(path) ? 'bg-white/15 text-white' : '',
   ].join(' ')
 
@@ -28,7 +28,9 @@ async function logout() {
 
 <template>
   <div class="min-h-screen">
-    <header class="flex flex-wrap items-center gap-4 bg-primary px-6 py-3 text-white md:gap-6">
+    <header
+      class="sticky top-0 z-50 flex flex-wrap items-center gap-4 bg-primary px-4 py-3 text-white shadow-sm md:gap-6 md:px-6"
+    >
       <div class="flex items-center gap-2">
         <CatolicaIcon class="h-8 text-white" />
         <span class="hidden md:inline">SGP Aluno</span>

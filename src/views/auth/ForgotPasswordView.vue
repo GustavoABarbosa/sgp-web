@@ -3,10 +3,10 @@ import { ref } from 'vue'
 import { mockApi, isApiError } from '@/mock/mockApi'
 import FormField from '@/components/FormField.vue'
 import { forgotPasswordSchema, useZodForm } from '@/shared/validation'
+import { useToast } from '@/shared/useToast'
 
+const toast = useToast()
 const { fields, validate, errorFor } = useZodForm(forgotPasswordSchema, { email: '' })
-const message = ref('')
-const error = ref('')
 const loading = ref(false)
 
 async function submit() {
@@ -14,13 +14,11 @@ async function submit() {
   if (!data) return
 
   loading.value = true
-  error.value = ''
-  message.value = ''
   try {
     const res = await mockApi.forgotPassword(data.email)
-    message.value = res.message
+    toast.success(res.message)
   } catch (e) {
-    error.value = isApiError(e) ? e.message : 'Erro'
+    toast.error(isApiError(e) ? e.message : 'Erro ao enviar recuperação')
   } finally {
     loading.value = false
   }
@@ -39,8 +37,6 @@ async function submit() {
           type="email"
           :error="errorFor('email')"
         />
-        <p v-if="message" class="text-sm text-success">{{ message }}</p>
-        <p v-if="error" class="text-sm text-danger">{{ error }}</p>
         <button
           type="submit"
           :disabled="loading"

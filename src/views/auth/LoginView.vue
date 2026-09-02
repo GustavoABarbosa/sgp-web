@@ -5,9 +5,11 @@ import { DEMO_CREDENTIALS } from '@/mock/initialDb'
 import AuthFormHeader from '@/components/AuthFormHeader.vue'
 import FormField from '@/components/FormField.vue'
 import { loginSchema, useZodForm } from '@/shared/validation'
+import { useToast } from '@/shared/useToast'
 
 const auth = useAuthStore()
 const router = useRouter()
+const toast = useToast()
 const { fields, validate, errorFor } = useZodForm(loginSchema, {
   email: '',
   password: '',
@@ -19,9 +21,10 @@ async function submit() {
 
   try {
     await auth.login(data.email, data.password)
+    toast.success('Login realizado com sucesso.')
     router.push(auth.isProfessor ? '/professor/dashboard' : '/aluno/dashboard')
   } catch {
-    /* error in store */
+    toast.error(auth.error ?? 'Erro ao fazer login')
   }
 }
 
@@ -54,7 +57,6 @@ function fillDemo(role: 'professor' | 'estudante') {
           autocomplete="current-password"
           :error="errorFor('password')"
         />
-        <p v-if="auth.error" class="mt-2 text-sm text-danger">{{ auth.error }}</p>
         <button
           type="submit"
           :disabled="auth.loading"

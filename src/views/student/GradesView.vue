@@ -69,36 +69,44 @@ watch(grades, (g) => {
 
     <LoadingState :loading="loading" :message="grades.length ? '' : 'Nenhuma nota registrada'" />
 
-    <div v-if="grades.length" class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <table class="w-full border-collapse text-sm">
-        <thead>
-          <tr>
-            <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Prova</th>
-            <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Disciplina</th>
-            <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Nota</th>
-            <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Professor</th>
-            <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Data</th>
-            <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="g in grades" :key="g.applicationId">
-            <td class="border-b border-border px-3 py-2.5">{{ g.examTitle }}</td>
-            <td class="border-b border-border px-3 py-2.5">{{ g.subject }}</td>
-            <td class="border-b border-border px-3 py-2.5"><strong>{{ g.totalScore }}</strong> / {{ g.maxScore }}</td>
-            <td class="border-b border-border px-3 py-2.5">{{ g.professorName }}</td>
-            <td class="border-b border-border px-3 py-2.5">{{ formatDate(g.correctedAt) }}</td>
-            <td class="border-b border-border px-3 py-2.5">
-              <button
-                class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
-                @click="router.push(`/aluno/grades/${g.applicationId}`)"
-              >
-                Detalhes
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div v-if="grades.length" class="overflow-hidden mt-4 rounded-lg border border-border bg-surface shadow-sm">
+      <div class="overflow-x-auto">
+
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr>
+              <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Prova</th>
+              <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Disciplina</th>
+              <th class="border-b border-border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted">Nota</th>
+              <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Professor</th>
+              <th class="border-b border-border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted">Data</th>
+              <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="g in grades"
+              :key="g.applicationId"
+              class="hover:bg-page cursor-pointer transition-colors duration-300"
+              @click="router.push(`/aluno/grades/${g.applicationId}`)"
+            >
+              <td class="border-b border-border px-3 py-2 min-w-40">{{ g.examTitle }}</td>
+              <td class="border-b border-border px-3 py-2 min-w-40">{{ g.subject }}</td>
+              <td class="border-b border-border px-3 py-2 min-w-20 text-center"><strong>{{ g.totalScore }}</strong> / {{ g.maxScore }}</td>
+              <td class="border-b border-border px-3 py-2 min-w-40">{{ g.professorName }}</td>
+              <td class="border-b border-border px-3 py-2 min-w-20 text-center">{{ formatDate(g.correctedAt) }}</td>
+              <td class="border-b border-border px-2 py-2 min-w-8 text-center">
+                <button
+                  class="inline-flex items-center justify-center rounded-full border border-border bg-surface p-1 text-muted hover:bg-page"
+                  @click="router.push(`/aluno/grades/${g.applicationId}`)"
+                >
+                  <Icon name="ph:eye" class="size-5" />
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>

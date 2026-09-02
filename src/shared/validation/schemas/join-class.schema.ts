@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { emailWithDomain } from '../fields'
+import { emailWithDomain, fullNameSchema, passwordSchema } from '../fields'
 
 export const joinClassSchema = z
   .object({
@@ -16,19 +16,20 @@ export const joinClassSchema = z
   .superRefine((data, ctx) => {
     if (!data.needsRegister) return
 
-    const fullName = data.fullName.trim()
-    if (fullName.length < 3) {
+    const nameResult = fullNameSchema.safeParse(data.fullName)
+    if (!nameResult.success) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Nome deve ter no mínimo 3 caracteres',
+        message: nameResult.error.issues[0]?.message ?? 'Informe nome e sobrenome',
         path: ['fullName'],
       })
     }
 
-    if (data.password.length < 8) {
+    const passwordResult = passwordSchema.safeParse(data.password)
+    if (!passwordResult.success) {
       ctx.addIssue({
         code: 'custom',
-        message: 'Senha deve ter no mínimo 8 caracteres',
+        message: passwordResult.error.issues[0]?.message ?? 'Senha inválida',
         path: ['password'],
       })
     }

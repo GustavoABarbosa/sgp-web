@@ -58,7 +58,7 @@ function resetMockData() {
 
     <div class="rounded-lg border border-border bg-surface p-5 shadow-sm">
       <h2 class="mb-2">Dados pessoais</h2>
-      <div class="grid grid-cols-3 gap-2 text-sm">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
         <div
           v-for="item in profileData"
           :key="item.label"
@@ -75,7 +75,7 @@ function resetMockData() {
       </div>
     </div>
 
-    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex items-center justify-between">
+    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h2>Sessões</h2>
         <p class="text-sm text-muted">Encerre todas as sessões ativas em outros dispositivos.</p>
@@ -88,7 +88,7 @@ function resetMockData() {
       </button>
     </div>
 
-    <div class="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-5 shadow-sm flex items-center justify-between gap-3">
+    <div class="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         <h2>Privacidade (LGPD)</h2>
         <p class="mb-3 text-sm text-muted">
@@ -104,7 +104,7 @@ function resetMockData() {
       </button>
     </div>
 
-    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex items-center justify-between">
+    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
         
         <h2>Desenvolvimento</h2>

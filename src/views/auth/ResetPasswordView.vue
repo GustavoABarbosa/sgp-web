@@ -4,14 +4,15 @@ import { useRoute, useRouter } from 'vue-router'
 import { mockApi, isApiError } from '@/mock/mockApi'
 import FormField from '@/components/FormField.vue'
 import { resetPasswordSchema, useZodForm } from '@/shared/validation'
+import { useToast } from '@/shared/useToast'
 
 const route = useRoute()
 const router = useRouter()
+const toast = useToast()
 const { fields, validate, errorFor } = useZodForm(resetPasswordSchema, {
   password: '',
   confirmPassword: '',
 })
-const error = ref('')
 const loading = ref(false)
 
 async function submit() {
@@ -19,12 +20,12 @@ async function submit() {
   if (!data) return
 
   loading.value = true
-  error.value = ''
   try {
     await mockApi.resetPassword(String(route.query.token ?? ''), data.password)
+    toast.success('Senha redefinida com sucesso.')
     router.push('/login')
   } catch (e) {
-    error.value = isApiError(e) ? e.message : 'Erro'
+    toast.error(isApiError(e) ? e.message : 'Erro ao redefinir senha')
   } finally {
     loading.value = false
   }
@@ -50,7 +51,6 @@ async function submit() {
           type="password"
           :error="errorFor('confirmPassword')"
         />
-        <p v-if="error" class="text-sm text-danger">{{ error }}</p>
         <button
           type="submit"
           :disabled="loading"

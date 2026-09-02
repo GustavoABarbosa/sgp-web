@@ -31,6 +31,16 @@ describe('auth schemas', () => {
     expect(result.success).toBe(false)
   })
 
+  it('rejects register with only one name', () => {
+    const result = registerSchema('estudante').safeParse({
+      fullName: 'Aluno',
+      email: 'aluno@catolicasc.edu.br',
+      password: 'senha1234',
+      confirmPassword: 'senha1234',
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('accepts student register with matching passwords', () => {
     const result = registerSchema('estudante').safeParse({
       fullName: 'Aluno Teste',

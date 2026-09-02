@@ -37,11 +37,11 @@ function onLogout() {
       aria-haspopup="menu"
       @click="open = !open"
     >
-      <Icon name="ph:user" class="size-5 shrink-0" />
-      <span class="max-w-40 truncate">{{ name }}</span>
+      <Icon name="ph:user-circle" class="size-6 shrink-0" />
+      <span class="hidden sm:block max-w-40 truncate" :title="name">{{ name }}</span>
       <Icon
-        name="ph:caret-down"
-        class="size-3.5 shrink-0 opacity-80 transition-transform"
+        name="ph:caret-down-bold"
+        class="hidden sm:block size-4 shrink-0 opacity-80 transition-transform"
         :class="{ 'rotate-180': open }"
       />
     </button>
