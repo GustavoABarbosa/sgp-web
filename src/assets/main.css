@@ -21,8 +21,8 @@
   }
 }
 
-button {
-  @apply cursor-pointer;
+button, select {
+  @apply cursor-pointer transition-all duration-200;
 }
 
 h2 {

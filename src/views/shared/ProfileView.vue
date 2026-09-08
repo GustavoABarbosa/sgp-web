@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { mockApi, isApiError } from '@/mock/mockApi'
+import ConfirmModal from '@/components/ConfirmModal.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -119,26 +120,14 @@ function resetMockData() {
       <p v-if="message" class="mt-2 text-sm text-success">{{ message }}</p>
     </div>
 
-    <div v-if="showAnonymize" class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" @click.self="showAnonymize = false">
-      <div class="w-full max-w-md rounded-lg bg-surface p-6 shadow-2xl">
-        <h2>Confirmar anonimização</h2>
-        <p>Esta ação não pode ser desfeita. Deseja continuar?</p>
-        <p v-if="error" class="text-sm text-danger">{{ error }}</p>
-        <div class="mt-4 flex justify-end gap-2">
-          <button
-            class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
-            @click="showAnonymize = false"
-          >
-            Cancelar
-          </button>
-          <button
-            class="inline-flex items-center justify-center rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-            @click="confirmAnonymize"
-          >
-            Confirmar
-          </button>
-        </div>
-      </div>
-    </div>
+    <ConfirmModal
+      v-model="showAnonymize"
+      title="Confirmar anonimização"
+      @cancel="error = ''"
+      @confirm="confirmAnonymize"
+    >
+      <p>Esta ação não pode ser desfeita. Deseja continuar?</p>
+      <p v-if="error" class="text-sm text-danger">{{ error }}</p>
+    </ConfirmModal>
   </div>
 </template>
