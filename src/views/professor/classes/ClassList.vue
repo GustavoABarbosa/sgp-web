@@ -38,13 +38,12 @@ onMounted(load)
     </div>
 
     <label class="mb-4 flex items-center gap-2 text-sm">
-      <input v-model="showArchived" type="checkbox" @change="load" /> Mostrar arquivadas
+      <input v-model="showArchived" type="checkbox" @change="load" /> Exibir arquivadas
     </label>
 
-    <LoadingState :loading="loading" :message="classes.length ? '' : 'Nenhuma turma'" />
-
-    <div v-if="classes.length" class="rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <table class="w-full border-collapse text-sm">
+    <div class="rounded-lg border border-border bg-surface p-5 shadow-sm">
+      <LoadingState v-if="loading" :loading="loading" :message="classes.length ? '' : 'Nenhuma turma'" />
+      <table v-else class="w-full border-collapse text-sm">
         <thead>
           <tr>
             <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Nome</th>
