@@ -4,6 +4,7 @@ import type { StudentExam } from '@/types'
 import { mockApi } from '@/mock/mockApi'
 import { formatDate } from '@/shared/utils'
 import LoadingState from '@/components/LoadingState.vue'
+import Breadcrumb from '@/components/Breadcrumb.vue'
 
 const exams = ref<StudentExam[]>([])
 const loading = ref(true)
@@ -16,9 +17,7 @@ onMounted(async () => {
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="mb-0 text-3xl font-semibold">Minhas provas</h1>
-    </div>
+    <Breadcrumb class="mb-6" :items="[{ label: 'Minhas provas' }]" />
     <LoadingState :loading="loading" :message="exams.length ? '' : 'Nenhuma prova atribuída'" />
     <div v-if="exams.length" class="overflow-hidden rounded-lg border border-border bg-surface shadow-sm">
       <div class="overflow-x-auto">

@@ -30,14 +30,17 @@ function close() {
     >
       <div class="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
         <h2 class="mb-0">{{ title }}</h2>
-        <button
-          type="button"
-          class="inline-flex items-center justify-center rounded-full p-1 text-muted hover:bg-page hover:text-text"
-          title="Fechar"
-          @click="close"
-        >
-          <Icon name="ph:x" class="size-5" />
-        </button>
+        <div class="flex items-center gap-2">
+          <slot name="actions" :close="close" />
+          <button
+            type="button"
+            class="rounded-full p-1 text-muted hover:bg-page hover:text-text"
+            title="Fechar"
+            @click="close"
+          >
+            <Icon name="ph:x" class="size-5" />
+          </button>
+        </div>
       </div>
       <div class="overflow-y-auto px-6 py-4">
         <slot />

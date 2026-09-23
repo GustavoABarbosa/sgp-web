@@ -6,6 +6,7 @@ import { mockApi, isApiError } from '@/mock/mockApi'
 import { renderMarkdown } from '@/shared/utils'
 import MarkdownPreview from '@/components/MarkdownPreview.vue'
 import LoadingState from '@/components/LoadingState.vue'
+import Breadcrumb from '@/components/Breadcrumb.vue'
 
 const route = useRoute()
 const answerKey = ref<AnswerKey | null>(null)
@@ -26,7 +27,10 @@ onMounted(async () => {
 <template>
   <div class="flex min-h-screen justify-center bg-page p-4">
     <div class="w-full max-w-3xl rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h1 class="mb-0 text-3xl font-semibold">Gabarito — Versão {{ answerKey?.versionNumber ?? '?' }}</h1>
+      <Breadcrumb
+        class="mb-6"
+        :items="[{ label: `Gabarito — Versão ${answerKey?.versionNumber ?? '?'}` }]"
+      />
       <LoadingState :loading="loading" :message="error" />
 
       <template v-if="answerKey">

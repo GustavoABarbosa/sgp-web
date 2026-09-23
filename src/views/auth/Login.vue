@@ -1,37 +1,38 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { DEMO_CREDENTIALS } from '@/mock/initialDb'
-import AuthFormHeader from '@/components/AuthFormHeader.vue'
-import FormField from '@/components/FormField.vue'
-import { loginSchema, useZodForm } from '@/shared/validation'
-import { useToast } from '@/shared/useToast'
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import { DEMO_CREDENTIALS } from "@/mock/initialDb";
+import AuthFormHeader from "@/components/AuthFormHeader.vue";
+import FormField from "@/components/FormField.vue";
+import EmailInputGroup from "@/components/EmailInputGroup.vue";
+import { loginSchema, useZodForm } from "@/shared/validation";
+import { useToast } from "@/shared/useToast";
 
-const auth = useAuthStore()
-const router = useRouter()
-const toast = useToast()
+const auth = useAuthStore();
+const router = useRouter();
+const toast = useToast();
 const { fields, validate, errorFor } = useZodForm(loginSchema, {
-  email: '',
-  password: '',
-})
+  email: "",
+  password: "",
+});
 
 async function submit() {
-  const data = validate()
-  if (!data) return
+  const data = validate();
+  if (!data) return;
 
   try {
-    await auth.login(data.email, data.password)
-    toast.success('Login realizado com sucesso.')
-    router.push(auth.isProfessor ? '/professor/dashboard' : '/aluno/dashboard')
+    await auth.login(data.email, data.password);
+    toast.success("Login realizado com sucesso.");
+    router.push(auth.isProfessor ? "/professor/dashboard" : "/aluno/dashboard");
   } catch {
-    toast.error(auth.error ?? 'Erro ao fazer login')
+    toast.error(auth.error ?? "Erro ao fazer login");
   }
 }
 
-function fillDemo(role: 'professor' | 'estudante') {
-  const cred = DEMO_CREDENTIALS[role]
-  fields.email = cred.email
-  fields.password = cred.password
+function fillDemo(role: "professor" | "estudante") {
+  const cred = DEMO_CREDENTIALS[role];
+  fields.email = cred.email;
+  fields.password = cred.password;
 }
 </script>
 
@@ -41,12 +42,10 @@ function fillDemo(role: 'professor' | 'estudante') {
       <AuthFormHeader title="SGP Católica" description="Sistema de Geração de Provas" logo />
 
       <form @submit.prevent="submit">
-        <FormField
+        <EmailInputGroup
           id="email"
           v-model="fields.email"
           label="E-mail"
-          type="email"
-          autocomplete="email"
           :error="errorFor('email')"
         />
         <FormField
@@ -62,7 +61,7 @@ function fillDemo(role: 'professor' | 'estudante') {
           :disabled="auth.loading"
           class="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-55"
         >
-          {{ auth.loading ? '...' : 'Entrar' }}
+          {{ auth.loading ? "..." : "Entrar" }}
         </button>
       </form>
 
@@ -78,14 +77,14 @@ function fillDemo(role: 'professor' | 'estudante') {
         <p class="w-full text-xs text-muted">Dados demo:</p>
         <button
           type="button"
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
           @click="fillDemo('professor')"
         >
           Professor demo
         </button>
         <button
           type="button"
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
           @click="fillDemo('estudante')"
         >
           Aluno demo

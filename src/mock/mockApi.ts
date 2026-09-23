@@ -291,11 +291,25 @@ class MockApi {
   }
 
   // Classes
-  async listClasses(status?: string): Promise<Class[]> {
+  async listClasses(params?: {
+    status?: string
+    name?: string
+    subject?: string
+    term?: string
+  }): Promise<Class[]> {
     await delay()
     const user = requireAuth(this.accessToken, this.db, 'professor')
     let items = this.db.classes.filter((c) => c.teacherId === user.id)
-    if (status) items = items.filter((c) => c.status === status)
+    if (params?.status) items = items.filter((c) => c.status === params.status)
+    if (params?.name) {
+      const s = params.name.toLowerCase()
+      items = items.filter((c) => c.name.toLowerCase().includes(s))
+    }
+    if (params?.subject) {
+      const s = params.subject.toLowerCase()
+      items = items.filter((c) => c.subject.toLowerCase().includes(s))
+    }
+    if (params?.term) items = items.filter((c) => c.term === params.term)
     return items
   }
 

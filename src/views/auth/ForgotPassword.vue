@@ -2,6 +2,8 @@
 import { ref } from 'vue'
 import { mockApi, isApiError } from '@/mock/mockApi'
 import FormField from '@/components/FormField.vue'
+import Breadcrumb from '@/components/Breadcrumb.vue'
+import EmailInputGroup from '@/components/EmailInputGroup.vue'
 import { forgotPasswordSchema, useZodForm } from '@/shared/validation'
 import { useToast } from '@/shared/useToast'
 
@@ -28,13 +30,18 @@ async function submit() {
 <template>
   <div class="flex min-h-screen items-center justify-center bg-linear-to-br from-primary to-primary-light p-4">
     <div class="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h1 class="mb-0 text-3xl font-semibold">Recuperar senha</h1>
-      <form class="mt-6" @submit.prevent="submit">
-        <FormField
+      <Breadcrumb
+        class="mb-6"
+        :items="[
+          { label: 'Login', to: '/login' },
+          { label: 'Recuperar senha' },
+        ]"
+      />
+      <form @submit.prevent="submit">
+        <EmailInputGroup
           id="email"
           v-model="fields.email"
           label="E-mail"
-          type="email"
           :error="errorFor('email')"
         />
         <button
@@ -45,9 +52,6 @@ async function submit() {
           Enviar
         </button>
       </form>
-      <p class="mt-5 text-sm">
-        <RouterLink to="/login" class="text-primary-light no-underline">Voltar ao login</RouterLink>
-      </p>
     </div>
   </div>
 </template>

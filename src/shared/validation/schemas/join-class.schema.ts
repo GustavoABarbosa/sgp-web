@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { emailWithDomain, fullNameSchema, passwordSchema } from '../fields'
+import { emailWithDomain, fullNameSchema, passwordSchema, STUDENT_EMAIL_DOMAIN } from '../fields'
 
 export const joinClassSchema = z
   .object({
@@ -8,7 +8,7 @@ export const joinClassSchema = z
       .trim()
       .min(1, 'Informe o código de convite')
       .transform((value) => value.toUpperCase()),
-    email: emailWithDomain('@catolicasc.edu.br'),
+    email: emailWithDomain(STUDENT_EMAIL_DOMAIN),
     fullName: z.string(),
     password: z.string(),
     needsRegister: z.boolean(),

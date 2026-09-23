@@ -1,61 +1,60 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
-import { mockApi, isApiError } from '@/mock/mockApi'
-import ConfirmModal from '@/components/ConfirmModal.vue'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "@/stores/auth";
+import { mockApi, isApiError } from "@/mock/mockApi";
+import ConfirmModal from "@/components/ConfirmModal.vue";
+import Breadcrumb from "@/components/Breadcrumb.vue";
 
-const auth = useAuthStore()
-const router = useRouter()
-const showAnonymize = ref(false)
-const message = ref('')
-const error = ref('')
+const auth = useAuthStore();
+const router = useRouter();
+const showAnonymize = ref(false);
+const message = ref("");
+const error = ref("");
 
 const profileData = ref([
   {
-    icon: 'ph:user',
-    label: 'Nome',
+    icon: "ph:user",
+    label: "Nome",
     value: auth.user?.fullName,
   },
   {
-    icon: 'ph:at',
-    label: 'E-mail',
+    icon: "ph:at",
+    label: "E-mail",
     value: auth.user?.email,
   },
   {
-    icon: 'ph:user-circle',
-    label: 'Tipo',
-    value: auth.user?.role === 'professor' ? 'Professor' : 'Aluno',
+    icon: "ph:user-circle",
+    label: "Tipo",
+    value: auth.user?.role === "professor" ? "Professor" : "Aluno",
   },
-])
+]);
 
 async function logoutAll() {
-  await auth.logoutAll()
-  router.push('/login')
+  await auth.logoutAll();
+  router.push("/login");
 }
 
 async function confirmAnonymize() {
   try {
-    await auth.anonymize()
-    router.push('/login')
+    await auth.anonymize();
+    router.push("/login");
   } catch (e) {
-    error.value = isApiError(e) ? e.message : 'Erro'
+    error.value = isApiError(e) ? e.message : "Erro";
   }
 }
 
 function resetMockData() {
-  mockApi.reset()
-  message.value = 'Dados mock resetados. Faça login novamente.'
-  auth.logout()
-  router.push('/login')
+  mockApi.reset();
+  message.value = "Dados mock resetados. Faça login novamente.";
+  auth.logout();
+  router.push("/login");
 }
 </script>
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="mb-0 text-3xl font-semibold">Meu perfil</h1>
-    </div>
+    <Breadcrumb class="mb-6" :items="[{ label: 'Meu perfil' }]" />
 
     <div class="rounded-lg border border-border bg-surface p-5 shadow-sm">
       <h2 class="mb-2">Dados pessoais</h2>
@@ -76,25 +75,29 @@ function resetMockData() {
       </div>
     </div>
 
-    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div
+      class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    >
       <div>
         <h2>Sessões</h2>
         <p class="text-sm text-muted">Encerre todas as sessões ativas em outros dispositivos.</p>
       </div>
       <button
-        class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
+        class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
         @click="logoutAll"
       >
         Sair de todos os dispositivos
       </button>
     </div>
 
-    <div class="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div
+      class="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    >
       <div>
         <h2>Privacidade (LGPD)</h2>
         <p class="mb-3 text-sm text-muted">
-          Anonimizar sua conta é irreversível. Notas e correções existentes são preservadas,
-          mas seus dados pessoais serão substituídos por placeholders.
+          Anonimizar sua conta é irreversível. Notas e correções existentes são preservadas, mas seus dados pessoais
+          serão substituídos por placeholders.
         </p>
       </div>
       <button
@@ -105,18 +108,19 @@ function resetMockData() {
       </button>
     </div>
 
-    <div class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div
+      class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    >
       <div>
-        
         <h2>Desenvolvimento</h2>
         <p class="mb-3 text-sm text-muted">Restaura os dados mock iniciais.</p>
       </div>
       <button
-        class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
+        class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
         @click="resetMockData"
       >
         Resetar dados mock
-        </button>
+      </button>
       <p v-if="message" class="mt-2 text-sm text-success">{{ message }}</p>
     </div>
 

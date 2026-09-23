@@ -10,7 +10,8 @@
   --color-text: #1a2332;
   --color-muted: #5c6b7a;
   --color-danger: #c0392b;
-  --color-success: #1e7e4a;
+  --color-success: #4a934a;
+  --color-success-light: #5cb85c;
   --color-warning: #b86e00;
   --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
