@@ -36,7 +36,7 @@ const steps = computed(() => {
     { label: "Criada", done: true },
     { label: "PDF gerado", done: hasPdf },
     { label: "Gabarito publicado", done: hasPublished },
-    { label: "Correções", done: hasCorrections },
+    { label: "Corrigido", done: hasCorrections },
     { label: "Notas lançadas", done: hasCorrections && allAssigned },
   ];
   const currentIndex = items.findIndex((s) => !s.done);
