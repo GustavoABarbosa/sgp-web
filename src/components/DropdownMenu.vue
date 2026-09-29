@@ -1,20 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { onClickOutside } from '@vueuse/core'
+import { ref } from "vue";
+import { onClickOutside } from "@vueuse/core";
 
-const open = ref(false)
-const root = ref<HTMLElement | null>(null)
+const open = ref(false);
+const root = ref<HTMLElement | null>(null);
 
 onClickOutside(root, () => {
-  open.value = false
-})
+  open.value = false;
+});
 
 function toggle() {
-  open.value = !open.value
+  open.value = !open.value;
 }
 
 function close() {
-  open.value = false
+  open.value = false;
 }
 </script>
 
@@ -23,16 +23,13 @@ function close() {
     <slot name="trigger" :open="open" :toggle="toggle">
       <button
         type="button"
-        class="inline-flex items-center justify-center rounded-full border border-border p-1.5 text-text hover:bg-page"
+        class="rounded-full border border-border p-1.5 text-text bg-white hover:border-neutral-400"
         :aria-expanded="open"
         aria-haspopup="menu"
         title="Ações"
-        @click="toggle"
+        @click.stop="toggle"
       >
-        <Icon name="ph:dots-three-bold" :class="[
-          'size-5 transition-all duration-200',
-          open ? 'rotate-90' : ''
-        ]" />
+        <Icon name="ph:dots-three-bold" :class="['size-5 transition-all duration-200', open ? 'rotate-90' : '']" />
       </button>
     </slot>
 

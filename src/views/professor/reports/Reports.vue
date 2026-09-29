@@ -1,60 +1,59 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import type { ApplicationReport, Class, ConsolidatedReport } from '@/types'
-import { mockApi } from '@/mock/mockApi'
-import { downloadText } from '@/shared/utils'
-import LoadingState from '@/components/LoadingState.vue'
+import { onMounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
+import type { ApplicationReport, Class, ConsolidatedReport } from "@/types";
+import { mockApi } from "@/mock/mockApi";
+import { downloadText } from "@/shared/utils";
+import LoadingState from "@/components/LoadingState.vue";
+import Breadcrumb from "@/components/Breadcrumb.vue";
 
-const route = useRoute()
-const classes = ref<Class[]>([])
-const classId = ref('')
-const subject = ref('')
-const term = ref('')
-const applicationId = ref(String(route.query.applicationId ?? ''))
-const report = ref<ApplicationReport | null>(null)
-const consolidated = ref<ConsolidatedReport | null>(null)
-const mode = ref<'single' | 'consolidated'>(applicationId.value ? 'single' : 'consolidated')
-const loading = ref(false)
+const route = useRoute();
+const classes = ref<Class[]>([]);
+const classId = ref("");
+const subject = ref("");
+const term = ref("");
+const applicationId = ref(String(route.query.applicationId ?? ""));
+const report = ref<ApplicationReport | null>(null);
+const consolidated = ref<ConsolidatedReport | null>(null);
+const mode = ref<"single" | "consolidated">(applicationId.value ? "single" : "consolidated");
+const loading = ref(false);
 
 async function loadSingle() {
-  if (!applicationId.value) return
-  loading.value = true
-  report.value = await mockApi.getApplicationReport(applicationId.value)
-  consolidated.value = null
-  loading.value = false
+  if (!applicationId.value) return;
+  loading.value = true;
+  report.value = await mockApi.getApplicationReport(applicationId.value);
+  consolidated.value = null;
+  loading.value = false;
 }
 
 async function loadConsolidated() {
-  loading.value = true
+  loading.value = true;
   consolidated.value = await mockApi.getConsolidatedReport({
     classId: classId.value || undefined,
     subject: subject.value || undefined,
     term: term.value || undefined,
-  })
-  report.value = null
-  loading.value = false
+  });
+  report.value = null;
+  loading.value = false;
 }
 
-function exportReport(format: 'csv' | 'xlsx' | 'pdf') {
-  const id = applicationId.value || 'consolidated'
-  const content = mockApi.exportReport(id, format)
-  downloadText(content, `relatorio.${format}`, 'text/plain')
+function exportReport(format: "csv" | "xlsx" | "pdf") {
+  const id = applicationId.value || "consolidated";
+  const content = mockApi.exportReport(id, format);
+  downloadText(content, `relatorio.${format}`, "text/plain");
 }
 
-watch(mode, (m) => (m === 'single' ? loadSingle() : loadConsolidated()))
+watch(mode, (m) => (m === "single" ? loadSingle() : loadConsolidated()));
 onMounted(async () => {
-  classes.value = await mockApi.listClasses()
-  if (mode.value === 'single') loadSingle()
-  else loadConsolidated()
-})
+  classes.value = await mockApi.listClasses();
+  if (mode.value === "single") loadSingle();
+  else loadConsolidated();
+});
 </script>
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="mb-0 text-3xl font-semibold">Relatórios</h1>
-    </div>
+    <Breadcrumb class="mb-6" :items="[{ label: 'Relatórios' }]" />
 
     <div class="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface p-5 shadow-sm">
       <label class="flex items-center gap-1.5 text-sm">
@@ -71,7 +70,7 @@ onMounted(async () => {
           class="rounded-lg border border-border bg-white px-3 py-2"
         />
         <button
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
           @click="loadSingle"
         >
           Carregar
@@ -84,9 +83,13 @@ onMounted(async () => {
           <option v-for="c in classes" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
         <input v-model="subject" placeholder="Disciplina" class="rounded-lg border border-border bg-white px-3 py-2" />
-        <input v-model="term" placeholder="Período (2026/1)" class="rounded-lg border border-border bg-white px-3 py-2" />
+        <input
+          v-model="term"
+          placeholder="Período (2026/1)"
+          class="rounded-lg border border-border bg-white px-3 py-2"
+        />
         <button
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
           @click="loadConsolidated"
         >
           Filtrar
@@ -102,7 +105,7 @@ onMounted(async () => {
         <div class="mb-6 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
           <div class="rounded-lg border border-border bg-page p-4 text-center">
             <div class="text-2xl font-semibold text-primary">{{ report.stats.mean.toFixed(1) }}</div>
-            <div class="mt-1 text-xs uppercase tracking-wide text-muted">Média</div> 
+            <div class="mt-1 text-xs uppercase tracking-wide text-muted">Média</div>
           </div>
           <div class="rounded-lg border border-border bg-page p-4 text-center">
             <div class="text-2xl font-semibold text-primary">{{ report.stats.median.toFixed(1) }}</div>
@@ -128,19 +131,19 @@ onMounted(async () => {
 
         <div class="mt-4 flex flex-wrap gap-2">
           <button
-            class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+            class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
             @click="exportReport('csv')"
           >
             Export CSV
           </button>
           <button
-            class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+            class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
             @click="exportReport('xlsx')"
           >
             Export Excel
           </button>
           <button
-            class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+            class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
             @click="exportReport('pdf')"
           >
             Export PDF
@@ -152,9 +155,21 @@ onMounted(async () => {
         <table class="w-full border-collapse text-sm">
           <thead>
             <tr>
-              <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Aluno</th>
-              <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Nota</th>
-              <th class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted">Máx</th>
+              <th
+                class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+              >
+                Aluno
+              </th>
+              <th
+                class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+              >
+                Nota
+              </th>
+              <th
+                class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+              >
+                Máx
+              </th>
             </tr>
           </thead>
           <tbody>

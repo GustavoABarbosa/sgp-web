@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { UserRole } from '@/types'
 import {
+  emailDomainForRole,
   emailWithDomain,
   fullNameSchema,
   passwordMatchRefine,
@@ -8,7 +9,7 @@ import {
 } from '../fields'
 
 export function registerSchema(role: UserRole) {
-  const domain = role === 'professor' ? '@catolicasc.org.br' : '@catolicasc.edu.br'
+  const domain = emailDomainForRole(role)
 
   return z
     .object({

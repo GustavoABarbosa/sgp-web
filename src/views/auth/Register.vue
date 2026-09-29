@@ -5,7 +5,8 @@ import { useAuthStore } from '@/stores/auth'
 import type { UserRole } from '@/types'
 import AuthFormHeader from '@/components/AuthFormHeader.vue'
 import FormField from '@/components/FormField.vue'
-import { registerSchema, useZodForm } from '@/shared/validation'
+import EmailInputGroup from '@/components/EmailInputGroup.vue'
+import { emailDomainForRole, registerSchema, useZodForm } from '@/shared/validation'
 import { useToast } from '@/shared/useToast'
 
 const route = useRoute()
@@ -15,9 +16,7 @@ const toast = useToast()
 
 const role = computed(() => route.params.role as UserRole)
 const isProfessor = computed(() => role.value === 'professor')
-const domainHint = computed(() =>
-  isProfessor.value ? '@catolicasc.org.br' : '@catolicasc.edu.br',
-)
+const domain = computed(() => emailDomainForRole(role.value))
 
 const { fields, validate, errorFor } = useZodForm(registerSchema(role.value), {
   fullName: '',
@@ -51,7 +50,7 @@ async function submit() {
       <AuthFormHeader
         logo
         title="Cadastro"
-        :description="`${isProfessor ? 'Professor' : 'Aluno'}, use o e-mail ${domainHint}`"
+        :description="`${isProfessor ? 'Professor' : 'Aluno'}, use o e-mail ${domain}`"
       />
 
       <form @submit.prevent="submit">
@@ -62,12 +61,11 @@ async function submit() {
           placeholder="Nome e sobrenome"
           :error="errorFor('fullName')"
         />
-        <FormField
+        <EmailInputGroup
           id="email"
           v-model="fields.email"
           label="E-mail"
-          type="email"
-          :placeholder="`nome.sobrenome${domainHint}`"
+          :domain="domain"
           :error="errorFor('email')"
         />
         <FormField

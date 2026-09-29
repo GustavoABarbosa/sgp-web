@@ -4,12 +4,12 @@ import { watchDebounced } from "@vueuse/core";
 import { useRouter } from "vue-router";
 import type { Question } from "@/types";
 import { mockApi, isApiError } from "@/mock/mockApi";
-import { plainTextFromMarkdown, renderMarkdown } from "@/shared/utils";
-import MarkdownPreview from "@/components/MarkdownPreview.vue";
+import { plainTextFromMarkdown } from "@/shared/utils";
 import ConfirmModal from "@/components/ConfirmModal.vue";
 import DropdownMenu from "@/components/DropdownMenu.vue";
 import LoadingState from "@/components/LoadingState.vue";
-import Modal from "@/components/Modal.vue";
+import Breadcrumb from "@/components/Breadcrumb.vue";
+import QuestionViewModal from "./QuestionViewModal.vue";
 
 const router = useRouter();
 const questions = ref<Question[]>([]);
@@ -46,8 +46,14 @@ function viewQuestion(question: Question) {
 }
 
 function requestDelete(id: string) {
-  questionToDelete.value = id;
-  showDeleteModal.value = true;
+  questionToDelete.value = id
+  showViewModal.value = false
+  showDeleteModal.value = true
+}
+
+function editQuestion(id: string) {
+  showViewModal.value = false
+  router.push(`/professor/questions/${id}/edit`)
 }
 
 async function confirmDelete() {
@@ -78,10 +84,10 @@ onMounted(load);
 <template>
   <div>
     <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="mb-0 text-3xl font-semibold">Questões</h1>
+      <Breadcrumb :items="[{ label: 'Questões' }]" />
       <RouterLink
         to="/professor/questions/new"
-        class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
+        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
       >
         Nova questão
       </RouterLink>
@@ -122,8 +128,13 @@ onMounted(load);
           </tr>
         </thead>
         <tbody class="divide-y divide-border">
-          <tr v-for="q in questions" :key="q.id">
-            <td class="max-w-md min-w-0 align-middle py-2.5">
+          <tr
+            v-for="q in questions"
+            :key="q.id"
+            class="hover:bg-page cursor-pointer transition-all duration-200"
+            @click="viewQuestion(q)"
+          >
+            <td class="max-w-md min-w-0 align-middle py-2.5 ps-2">
               <p class="min-w-0 truncate" :title="plainTextFromMarkdown(q.statement)">
                 {{ plainTextFromMarkdown(q.statement) }}
               </p>
@@ -152,16 +163,8 @@ onMounted(load);
                 </div>
               </div>
             </td>
-            <td class="align-middle py-2.5 text-right">
-              <div class="inline-flex items-center justify-end gap-1">
-                <button
-                  type="button"
-                  class="inline-flex items-center justify-center rounded-full border border-border p-1.5 text-text hover:bg-page"
-                  title="Visualizar"
-                  @click="viewQuestion(q)"
-                >
-                  <Icon name="ph:eye" class="size-5" />
-                </button>
+            <td class="align-middle py-2.5 text-right pe-2" @click.stop>
+              <div class="inline-flex items-center justify-end">
                 <DropdownMenu>
                   <template #default="{ close }">
                     <button
@@ -182,7 +185,7 @@ onMounted(load);
                       class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text hover:bg-page"
                       @click="
                         close();
-                        router.push(`/professor/questions/${q.id}/edit`);
+                        editQuestion(q.id);
                       "
                     >
                       <Icon name="ph:pencil-simple" class="size-4" />
@@ -209,41 +212,38 @@ onMounted(load);
       </table>
     </div>
 
-    <Modal
-      v-model="showViewModal"
-      title="Visualizar questão"
-      size="lg"
-    >
-      <template v-if="viewing">
-        <div class="mb-4 flex flex-wrap items-center gap-3">
-          <div>
-            <h2 class="mb-2">Tipo</h2>
-            <span class="inline-flex items-center gap-1.5 capitalize text-sm">
-              <Icon
-                :name="viewing.type === 'objetiva' ? 'ph:check-circle' : 'ph:pencil-simple-line'"
-                class="size-4"
-              />
-              {{ viewing.type }}
-            </span>
-          </div>
-          <div>
-            <h2 class="mb-2">Tags</h2>
-            <div class="flex flex-wrap items-center gap-1.5">
-              <div
-                v-for="tag in viewing.tags"
-                :key="tag"
-                class="rounded-lg border border-border bg-page px-2.5 py-1 text-xs font-medium capitalize text-text"
-              >
-                {{ tag }}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="overflow-y-auto max-h-120 border border-border rounded-lg p-4">
-          <MarkdownPreview :html="renderMarkdown(viewing.statement)" />
-        </div>
+    <QuestionViewModal v-model="showViewModal" :question="viewing">
+      <template #actions="{ question: viewed }">
+        <DropdownMenu>
+          <template #default="{ close: closeMenu }">
+            <button
+              type="button"
+              role="menuitem"
+              class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text hover:bg-page"
+              @click="
+                closeMenu();
+                editQuestion(viewed.id);
+              "
+            >
+              <Icon name="ph:pencil-simple" class="size-4" />
+              Editar
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-page"
+              @click="
+                closeMenu();
+                requestDelete(viewed.id);
+              "
+            >
+              <Icon name="ph:trash" class="size-4" />
+              Excluir
+            </button>
+          </template>
+        </DropdownMenu>
       </template>
-    </Modal>
+    </QuestionViewModal>
 
     <ConfirmModal
       v-model="showDeleteModal"

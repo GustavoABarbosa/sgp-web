@@ -44,14 +44,14 @@ function onConfirm() {
       <div class="mt-4 flex justify-end gap-2">
         <button
           type="button"
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
           @click="close"
         >
           {{ cancelLabel }}
         </button>
         <button
           type="button"
-          class="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white"
+          class="rounded-lg px-4 py-2 text-sm font-medium text-white"
           :class="confirmDanger ? 'bg-danger hover:bg-red-700' : 'bg-primary hover:bg-primary-light'"
           @click="onConfirm"
         >

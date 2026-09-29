@@ -1,34 +1,33 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useAuthStore } from '@/stores/auth'
-import { mockApi } from '@/mock/mockApi'
+import { onMounted, ref } from "vue";
+import { useAuthStore } from "@/stores/auth";
+import { mockApi } from "@/mock/mockApi";
+import Breadcrumb from "@/components/Breadcrumb.vue";
 
-const auth = useAuthStore()
-const stats = ref({ questions: 0, classes: 0, exams: 0, applications: 0, pendingGrades: 0 })
+const auth = useAuthStore();
+const stats = ref({ questions: 0, classes: 0, exams: 0, applications: 0, pendingGrades: 0 });
 
 onMounted(async () => {
   const [questions, classes, exams, applications] = await Promise.all([
     mockApi.listQuestions({}),
-    mockApi.listClasses('active'),
+    mockApi.listClasses({ status: "active" }),
     mockApi.listExams(),
     mockApi.listApplications(),
-  ])
-  const pending = await mockApi.listCorrections('app-001', false)
+  ]);
+  const pending = await mockApi.listCorrections("app-001", false);
   stats.value = {
     questions: questions.total,
     classes: classes.length,
     exams: exams.length,
     applications: applications.length,
     pendingGrades: pending.length,
-  }
-})
+  };
+});
 </script>
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="mb-0 text-3xl font-semibold">Olá, {{ auth.user?.fullName?.split(' ')[0] }}</h1>
-    </div>
+    <Breadcrumb class="mb-6" :items="[{ label: `Olá, ${auth.user?.fullName?.split(' ')[0] ?? ''}` }]" />
 
     <div class="mb-6 grid grid-cols-[repeat(auto-fit,minmax(140px,1fr))] gap-4">
       <div class="rounded-lg border border-border bg-page p-4 text-center">
@@ -58,25 +57,25 @@ onMounted(async () => {
       <div class="mt-4 flex flex-wrap gap-2">
         <RouterLink
           to="/professor/questions/new"
-          class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
+          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
         >
           Nova questão
         </RouterLink>
         <RouterLink
           to="/professor/classes/new"
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
         >
           Nova turma
         </RouterLink>
         <RouterLink
           to="/professor/exams/new"
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
         >
           Nova prova
         </RouterLink>
         <RouterLink
           to="/professor/applications/new"
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
         >
           Nova aplicação
         </RouterLink>

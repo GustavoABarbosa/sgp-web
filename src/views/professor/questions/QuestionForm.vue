@@ -7,6 +7,7 @@ import { renderMarkdown } from "@/shared/utils";
 import { useToast } from "@/shared/useToast";
 import { discursiveQuestionSchema, getZodFieldErrors, objectiveQuestionSchema } from "@/shared/validation";
 import FormField from "@/components/FormField.vue";
+import Breadcrumb from "@/components/Breadcrumb.vue";
 import AutoResizeTextarea from "@/components/AutoResizeTextarea.vue";
 import MarkdownEditor from "@/components/MarkdownEditor.vue";
 import MarkdownPreview from "@/components/MarkdownPreview.vue";
@@ -146,9 +147,13 @@ onMounted(load);
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <h1 class="mb-0 text-3xl font-semibold">{{ isEdit ? "Editar" : "Nova" }} questão</h1>
-    </div>
+    <Breadcrumb
+      class="mb-6"
+      :items="[
+        { label: 'Questões', to: '/professor/questions' },
+        { label: isEdit ? 'Editar questão' : 'Nova questão' },
+      ]"
+    />
 
     <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -179,7 +184,7 @@ onMounted(load);
         <div v-for="alt in alternatives" :key="alt.id" class="mb-2 flex flex-wrap items-start gap-2">
           <button
             type="button"
-            class="mt-1.5 inline-flex items-center justify-center rounded-full border border-border bg-surface p-1 text-xs font-medium text-text transition-colors duration-300 hover:bg-page"
+            class="mt-1.5 rounded-full border border-border bg-surface p-1 text-xs font-medium text-text transition-colors duration-300 hover:bg-page"
             @click="removeAlternative(alt.id)"
           >
             <Icon name="ph:trash" class="size-4" />
@@ -198,7 +203,7 @@ onMounted(load);
         <button
           v-if="alternatives.length < 5"
           type="button"
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-2.5 py-1 text-sm font-medium text-text hover:bg-page gap-1"
+          class="rounded-lg border border-border bg-surface px-2.5 py-1 text-sm font-medium text-text hover:bg-page gap-1"
           @click="addAlternative"
         >
           <Icon name="ph:plus-bold" class="size-4" /> Adicionar Alternativa
@@ -213,13 +218,13 @@ onMounted(load);
       <div class="mt-4 flex flex-wrap gap-2">
         <RouterLink
           to="/professor/questions"
-          class="inline-flex items-center justify-center rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
         >
           Cancelar
         </RouterLink>
         <button
           type="submit"
-          class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light"
+          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light"
         >
           Salvar
         </button>
