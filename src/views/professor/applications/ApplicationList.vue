@@ -34,9 +34,10 @@ onMounted(load);
       <Breadcrumb :items="[{ label: 'Aplicações' }]" />
       <RouterLink
         to="/professor/applications/new"
-        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
+        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light flex gap-1 items-center"
       >
-        Nova aplicação
+        <Icon name="ph:plus-bold" class="size-4" />
+        <span>Nova aplicação</span>
       </RouterLink>
     </div>
 

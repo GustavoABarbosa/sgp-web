@@ -85,9 +85,10 @@ onMounted(async () => {
       <Breadcrumb :items="[{ label: 'Turmas' }]" />
       <RouterLink
         to="/professor/classes/new"
-        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
+        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light flex gap-1 items-center"
       >
-        Nova turma
+        <Icon name="ph:plus-bold" class="size-4" />
+        <span>Nova turma</span>
       </RouterLink>
     </div>
 

@@ -57,27 +57,31 @@ onMounted(async () => {
       <div class="mt-4 flex flex-wrap gap-2">
         <RouterLink
           to="/professor/questions/new"
-          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
+          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light flex gap-1 items-center"
         >
-          Nova questão
+          <Icon name="ph:plus-bold" class="size-4" />
+          <span>Nova questão</span>
         </RouterLink>
         <RouterLink
           to="/professor/classes/new"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page flex gap-1 items-center"
         >
-          Nova turma
+          <Icon name="ph:plus-bold" class="size-4" />
+          <span>Nova turma</span>
         </RouterLink>
         <RouterLink
           to="/professor/exams/new"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page flex gap-1 items-center"
         >
-          Nova prova
+          <Icon name="ph:plus-bold" class="size-4" />
+          <span>Nova prova</span>
         </RouterLink>
         <RouterLink
           to="/professor/applications/new"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
+          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page flex gap-1 items-center"
         >
-          Nova aplicação
+          <Icon name="ph:plus-bold" class="size-4" />
+          <span>Nova aplicação</span>
         </RouterLink>
       </div>
     </div>

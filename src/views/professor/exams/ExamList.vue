@@ -56,9 +56,10 @@ onMounted(load);
       <Breadcrumb :items="[{ label: 'Provas' }]" />
       <RouterLink
         to="/professor/exams/new"
-        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
+        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light flex gap-1 items-center"
       >
-        Nova prova
+        <Icon name="ph:plus-bold" class="size-4" />
+        <span>Nova prova</span>
       </RouterLink>
     </div>
 
@@ -83,12 +84,12 @@ onMounted(load);
               Título
             </th>
             <th
-              class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+              class="border-b border-border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted"
             >
               Questões
             </th>
             <th
-              class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
+              class="border-b border-border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted"
             >
               Status
             </th>
@@ -100,12 +101,12 @@ onMounted(load);
         <tbody>
           <tr v-for="e in exams" :key="e.id">
             <td class="border-b border-border px-3 py-2.5">{{ e.title }}</td>
-            <td class="border-b border-border px-3 py-2.5">{{ e.questions.length }}</td>
-            <td class="border-b border-border px-3 py-2.5">
+            <td class="border-b border-border px-3 py-2.5 text-center">{{ e.questions.length }}</td>
+            <td class="border-b border-border px-3 py-2.5 text-center">
               <StatusBadge :status="e.status">{{ statusLabel(e.status) }}</StatusBadge>
             </td>
             <td class="border-b border-border px-3 py-2.5">
-              <div class="flex flex-wrap gap-2">
+              <div class="flex justify-end gap-2">
                 <button
                   v-if="e.status !== 'closed'"
                   class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
