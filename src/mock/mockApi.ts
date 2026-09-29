@@ -704,8 +704,9 @@ class MockApi {
   // Reports
   async getApplicationReport(applicationId: string): Promise<ApplicationReport> {
     await delay()
-    requireAuth(this.accessToken, this.db, 'professor')
-    const app = this.db.applications.find((a) => a.id === applicationId)!
+    const user = requireAuth(this.accessToken, this.db, 'professor')
+    const app = this.db.applications.find((a) => a.id === applicationId && a.teacherId === user.id)
+    if (!app) err('Aplicação não encontrada', 404)
     const exam = this.db.exams.find((e) => e.id === app.examId)!
     const cls = this.db.classes.find((c) => c.id === app.classId)!
     const maxScore = examMaxScore(exam, this.db.questions)
