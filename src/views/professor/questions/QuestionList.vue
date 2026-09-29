@@ -4,13 +4,12 @@ import { watchDebounced } from "@vueuse/core";
 import { useRouter } from "vue-router";
 import type { Question } from "@/types";
 import { mockApi, isApiError } from "@/mock/mockApi";
-import { plainTextFromMarkdown, renderMarkdown } from "@/shared/utils";
-import MarkdownPreview from "@/components/MarkdownPreview.vue";
+import { plainTextFromMarkdown } from "@/shared/utils";
 import ConfirmModal from "@/components/ConfirmModal.vue";
 import DropdownMenu from "@/components/DropdownMenu.vue";
 import LoadingState from "@/components/LoadingState.vue";
-import Modal from "@/components/Modal.vue";
 import Breadcrumb from "@/components/Breadcrumb.vue";
+import QuestionViewModal from "./QuestionViewModal.vue";
 
 const router = useRouter();
 const questions = ref<Question[]>([]);
@@ -213,13 +212,9 @@ onMounted(load);
       </table>
     </div>
 
-    <Modal
-      v-model="showViewModal"
-      title="Visualizar questão"
-      size="lg"
-    >
-      <template #actions>
-        <DropdownMenu v-if="viewing">
+    <QuestionViewModal v-model="showViewModal" :question="viewing">
+      <template #actions="{ question: viewed }">
+        <DropdownMenu>
           <template #default="{ close: closeMenu }">
             <button
               type="button"
@@ -227,7 +222,7 @@ onMounted(load);
               class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-text hover:bg-page"
               @click="
                 closeMenu();
-                editQuestion(viewing.id);
+                editQuestion(viewed.id);
               "
             >
               <Icon name="ph:pencil-simple" class="size-4" />
@@ -239,7 +234,7 @@ onMounted(load);
               class="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-danger hover:bg-page"
               @click="
                 closeMenu();
-                requestDelete(viewing.id);
+                requestDelete(viewed.id);
               "
             >
               <Icon name="ph:trash" class="size-4" />
@@ -248,33 +243,7 @@ onMounted(load);
           </template>
         </DropdownMenu>
       </template>
-      <template v-if="viewing">
-        <div class="mb-4 flex flex-wrap items-center gap-3">
-          <div>
-            <h2 class="mb-2">Tipo</h2>
-            <span class="inline-flex items-center gap-1.5 capitalize text-sm">
-              <Icon :name="viewing.type === 'objetiva' ? 'ph:check-circle' : 'ph:pencil-simple-line'" class="size-4" />
-              {{ viewing.type }}
-            </span>
-          </div>
-          <div>
-            <h2 class="mb-2">Tags</h2>
-            <div class="flex flex-wrap items-center gap-1.5">
-              <div
-                v-for="tag in viewing.tags"
-                :key="tag"
-                class="rounded-lg border border-border bg-page px-2.5 py-1 text-xs font-medium capitalize text-text"
-              >
-                {{ tag }}
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="overflow-y-auto max-h-120 border border-border rounded-lg p-4">
-          <MarkdownPreview :html="renderMarkdown(viewing.statement)" />
-        </div>
-      </template>
-    </Modal>
+    </QuestionViewModal>
 
     <ConfirmModal
       v-model="showDeleteModal"
