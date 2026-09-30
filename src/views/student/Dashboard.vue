@@ -1,57 +1,44 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
-import { mockApi } from "@/mock/mockApi";
-import type { StudentExam, StudentGrade } from "@/types";
-import Breadcrumb from "@/components/Breadcrumb.vue";
+import { studentApi } from "@/api/student";
+import { useResource } from "@/shared/useResource";
+import BaseButton from "@/components/BaseButton.vue";
+import BaseCard from "@/components/BaseCard.vue";
+import PageHeader from "@/components/PageHeader.vue";
+import StatCard from "@/components/StatCard.vue";
 
 const auth = useAuthStore();
-const exams = ref<StudentExam[]>([]);
-const grades = ref<StudentGrade[]>([]);
+const { data, error } = useResource(() => Promise.all([studentApi.exams(), studentApi.grades()]));
 
-onMounted(async () => {
-  exams.value = await mockApi.studentExams();
-  grades.value = await mockApi.studentGrades();
+const exams = computed(() => data.value?.[0] ?? []);
+const grades = computed(() => data.value?.[1] ?? []);
+const meanPercent = computed(() => {
+  const scored = grades.value.filter((g) => g.maxScore > 0);
+  if (!scored.length) return "--";
+  const mean = scored.reduce((sum, g) => sum + g.totalScore / g.maxScore, 0) / scored.length;
+  return `${Math.round(mean * 100)}%`;
 });
+const firstName = computed(() => auth.user?.fullName.split(" ")[0] ?? "");
 </script>
 
 <template>
   <div>
-    <Breadcrumb class="mb-6" :items="[{ label: `Olá, ${auth.user?.fullName?.split(' ')[0] ?? ''}` }]" />
+    <PageHeader :items="[{ label: `Olá, ${firstName}` }]" />
 
-    <div class="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <div class="rounded-lg border border-border bg-surface p-4 text-center">
-        <div class="text-2xl font-semibold text-primary">{{ exams.length || "--" }}</div>
-        <div class="mt-1 text-xs uppercase tracking-wide text-muted font-medium">Provas atribuídas</div>
-      </div>
-      <div class="rounded-lg border border-border bg-surface p-4 text-center">
-        <div class="text-2xl font-semibold text-primary">{{ grades.length || "--" }}</div>
-        <div class="mt-1 text-xs uppercase tracking-wide text-muted font-medium">Notas lançadas</div>
-      </div>
-      <div class="rounded-lg border border-border bg-surface p-4 text-center">
-        <div class="text-2xl font-semibold text-primary">
-          {{ grades.length ? (grades.reduce((s, g) => s + g.totalScore, 0) / grades.length).toFixed(1) : "--" }}
-        </div>
-        <div class="mt-1 text-xs uppercase tracking-wide text-muted font-medium">Média</div>
-      </div>
+    <p v-if="error" role="alert" class="mb-4 text-sm text-danger">{{ error }}</p>
+
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <StatCard label="Provas atribuídas" :value="exams.length || '--'" />
+      <StatCard label="Notas lançadas" :value="grades.length || '--'" />
+      <StatCard label="Aproveitamento médio" :value="meanPercent" />
     </div>
 
-    <div class="rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h2>Atalhos</h2>
+    <BaseCard title="Atalhos">
       <div class="mt-4 flex flex-wrap gap-2">
-        <RouterLink
-          to="/aluno/exams"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
-        >
-          Ver minhas provas
-        </RouterLink>
-        <RouterLink
-          to="/aluno/grades"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
-        >
-          Ver notas
-        </RouterLink>
+        <BaseButton variant="secondary" to="/aluno/exams">Ver minhas provas</BaseButton>
+        <BaseButton variant="secondary" to="/aluno/grades">Ver notas</BaseButton>
       </div>
-    </div>
+    </BaseCard>
   </div>
 </template>

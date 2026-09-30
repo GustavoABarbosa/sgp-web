@@ -1,90 +1,51 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import type { Application, Class, Exam } from "@/types";
-import { mockApi } from "@/mock/mockApi";
-import StatusBadge from "@/components/StatusBadge.vue";
+import type { ApplicationSummary } from "@/types";
+import { applicationsApi } from "@/api/applications";
+import { useResource } from "@/shared/useResource";
+import BaseButton from "@/components/BaseButton.vue";
+import BaseCard from "@/components/BaseCard.vue";
+import DataTable, { type Column } from "@/components/DataTable.vue";
 import LoadingState from "@/components/LoadingState.vue";
-import Breadcrumb from "@/components/Breadcrumb.vue";
-import { statusLabel } from "@/shared/utils";
+import PageHeader from "@/components/PageHeader.vue";
+import StatusBadge from "@/components/StatusBadge.vue";
 
-const applications = ref<(Application & { exam?: Exam; class?: Class })[]>([]);
-const loading = ref(true);
+const { data: applications, isLoading, error } = useResource(
+  () => applicationsApi.list(),
+  "Erro ao carregar aplicações",
+);
 
-async function load() {
-  loading.value = true;
-  const [apps, exams, classes] = await Promise.all([
-    mockApi.listApplications(),
-    mockApi.listExams(),
-    mockApi.listClasses({ status: "active" }),
-  ]);
-  applications.value = apps.map((a) => ({
-    ...a,
-    exam: exams.find((e) => e.id === a.examId),
-    class: classes.find((c) => c.id === a.classId),
-  }));
-  loading.value = false;
-}
-
-onMounted(load);
+const columns: Column[] = [
+  { key: "examTitle", label: "Prova" },
+  { key: "className", label: "Turma" },
+  { key: "status", label: "Status" },
+  { key: "actions", label: "Ações", hideLabel: true },
+];
 </script>
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <Breadcrumb :items="[{ label: 'Aplicações' }]" />
-      <RouterLink
-        to="/professor/applications/new"
-        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light flex gap-1 items-center"
+    <PageHeader :items="[{ label: 'Aplicações' }]">
+      <BaseButton to="/professor/applications/new" icon="ph:plus-bold">Nova aplicação</BaseButton>
+    </PageHeader>
+
+    <LoadingState :loading="isLoading && !applications" :message="error" />
+
+    <BaseCard v-if="applications && !error">
+      <DataTable
+        :columns="columns"
+        :rows="applications"
+        :row-key="(a: ApplicationSummary) => a.id"
+        empty="Nenhuma aplicação"
       >
-        <Icon name="ph:plus-bold" class="size-4" />
-        <span>Nova aplicação</span>
-      </RouterLink>
-    </div>
-
-    <LoadingState :loading="loading" :message="applications.length ? '' : 'Nenhuma aplicação'" />
-
-    <div v-if="applications.length" class="rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <table class="w-full border-collapse text-sm">
-        <thead>
-          <tr>
-            <th
-              class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-            >
-              Prova
-            </th>
-            <th
-              class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-            >
-              Turma
-            </th>
-            <th
-              class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-            >
-              Status
-            </th>
-            <th
-              class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-            ></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="a in applications" :key="a.id">
-            <td class="border-b border-border px-3 py-2.5">{{ a.exam?.title ?? a.examId }}</td>
-            <td class="border-b border-border px-3 py-2.5">{{ a.class?.name ?? a.classId }}</td>
-            <td class="border-b border-border px-3 py-2.5">
-              <StatusBadge :status="a.status">{{ statusLabel(a.status) }}</StatusBadge>
-            </td>
-            <td class="border-b border-border px-3 py-2.5">
-              <RouterLink
-                :to="`/professor/applications/${a.id}`"
-                class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text no-underline hover:bg-page"
-              >
-                Detalhes
-              </RouterLink>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+        <template #cell-status="{ row }">
+          <StatusBadge :status="row.status" />
+        </template>
+        <template #cell-actions="{ row }">
+          <BaseButton variant="secondary" size="sm" :to="`/professor/applications/${row.id}`">
+            Detalhes<span class="sr-only"> de {{ row.examTitle }} — {{ row.className }}</span>
+          </BaseButton>
+        </template>
+      </DataTable>
+    </BaseCard>
   </div>
 </template>

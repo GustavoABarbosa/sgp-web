@@ -1,5 +1,4 @@
 export type MarkdownFormat = 'bold' | 'italic' | 'code' | 'codeBlock'
-export type ListStyle = 'numeric' | 'alpha'
 
 const INDENT = '  '
 const NUMERIC_LIST = /^(\d+)\.\s+(.*)$/
@@ -81,9 +80,10 @@ export function renderMarkdown(text: string): string {
   if (!text) return ''
 
   const codeBlocks: string[] = []
-  const placeholder = (blockIndex: number) => `__CODE_BLOCK_${blockIndex}__`
+  // NUL delimiters cannot come from typed text, so content can't forge a placeholder.
+  const placeholder = (blockIndex: number) => `\u0000${blockIndex}\u0000`
 
-  let processed = text.replace(/```([\s\S]*?)```/g, (_, code: string) => {
+  const processed = text.replace(/```([\s\S]*?)```/g, (_, code: string) => {
     const index = codeBlocks.length
     codeBlocks.push(
       `<pre class="markdown-code-block"><code>${escapeHtml(code.trim())}</code></pre>`,
@@ -159,41 +159,20 @@ export function applyMarkdownFormat(
   }
 }
 
-export function applyMarkdownList(
-  value: string,
-  selectionStart: number,
-  selectionEnd: number,
-  style: ListStyle,
-): { value: string; selectionStart: number; selectionEnd: number } {
-  const selected = value.slice(selectionStart, selectionEnd)
-  const lines = selected ? selected.split('\n') : ['item']
-
-  const formatted = lines
-    .map((line, index) => {
-      const content = line.trim() ? line : 'item'
-      if (style === 'numeric') return `${index + 1}. ${content}`
-      const letter = String.fromCharCode('a'.charCodeAt(0) + index)
-      return `${letter}) ${content}`
-    })
-    .join('\n')
-
-  const nextValue = value.slice(0, selectionStart) + formatted + value.slice(selectionEnd)
-  const nextSelectionStart = selectionStart
-  const nextSelectionEnd = selectionStart + formatted.length
-
-  return {
-    value: nextValue,
-    selectionStart: nextSelectionStart,
-    selectionEnd: nextSelectionEnd,
-  }
-}
-
 function getAffectedLineRange(value: string, selectionStart: number, selectionEnd: number) {
   const lineStart = value.lastIndexOf('\n', selectionStart - 1) + 1
   const lineEndIndex = value.indexOf('\n', selectionEnd)
   const lineEnd = lineEndIndex === -1 ? value.length : lineEndIndex
 
   return { lineStart, lineEnd }
+}
+
+/** Tab only indents multi-line selections or list lines, so it stays usable for keyboard navigation. */
+export function shouldIndentOnTab(value: string, selectionStart: number, selectionEnd: number): boolean {
+  if (value.slice(selectionStart, selectionEnd).includes('\n')) return true
+  const { lineStart, lineEnd } = getAffectedLineRange(value, selectionStart, selectionEnd)
+  const line = value.slice(lineStart, lineEnd).trimStart()
+  return NUMERIC_LIST.test(line) || ALPHA_LIST.test(line)
 }
 
 export function applyMarkdownIndent(

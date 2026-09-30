@@ -1,98 +1,75 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { User, UserRole } from '@/types'
-import { mockApi, isApiError } from '@/mock/mockApi'
+import { computed, ref } from 'vue'
+import type { AuthSession, User, UserRole } from '@/types'
+import { authApi } from '@/api/auth'
+import { refreshSession } from '@/shared/api/client'
+import { session } from '@/shared/api/session'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
-  const loading = ref(false)
-  const error = ref<string | null>(null)
 
   const isAuthenticated = computed(() => !!user.value)
   const isProfessor = computed(() => user.value?.role === 'professor')
   const isStudent = computed(() => user.value?.role === 'estudante')
+  const homePath = computed(() => (isProfessor.value ? '/professor/dashboard' : '/aluno/dashboard'))
 
-  function clearError() {
-    error.value = null
+  function startSession(data: AuthSession) {
+    session.set(data)
+    user.value = data.user
+  }
+
+  function clear() {
+    session.clear()
+    user.value = null
   }
 
   async function init() {
-    mockApi.restoreSession()
-    const current = mockApi.getCurrentUser()
-    if (current) user.value = current
+    if (!(await refreshSession())) return
+    try {
+      user.value = await authApi.me()
+    } catch {
+      clear()
+    }
   }
 
   async function login(email: string, password: string) {
-    loading.value = true
-    error.value = null
-    try {
-      const res = await mockApi.login(email, password)
-      user.value = res.user
-    } catch (e) {
-      error.value = isApiError(e) ? e.message : 'Erro ao fazer login'
-      throw e
-    } finally {
-      loading.value = false
-    }
+    startSession(await authApi.login({ email, password }))
   }
 
-  async function register(data: {
-    role: UserRole
-    fullName: string
-    email: string
-    password: string
-  }) {
-    loading.value = true
-    error.value = null
-    try {
-      const res = await mockApi.register(data)
-      user.value = res.user
-    } catch (e) {
-      error.value = isApiError(e) ? e.message : 'Erro ao cadastrar'
-      throw e
-    } finally {
-      loading.value = false
-    }
+  async function register(data: { role: UserRole; fullName: string; email: string; password: string }) {
+    startSession(await authApi.register(data))
   }
 
+  /** The local session always ends; revoking the refresh token on the server is best effort. */
   async function logout() {
-    await mockApi.logout()
-    user.value = null
+    const refreshToken = session.refreshToken
+    clear()
+    if (refreshToken) await authApi.logout(refreshToken).catch(() => {})
   }
 
   async function logoutAll() {
-    await mockApi.logoutAll()
-    user.value = null
-  }
-
-  async function refreshProfile() {
-    user.value = await mockApi.me()
+    await authApi.logoutAll()
+    clear()
   }
 
   async function anonymize() {
-    await mockApi.anonymize()
-    user.value = null
-  }
-
-  function setUser(u: User) {
-    user.value = u
+    await authApi.anonymize()
+    clear()
   }
 
   return {
     user,
-    loading,
-    error,
     isAuthenticated,
     isProfessor,
     isStudent,
-    clearError,
+    homePath,
     init,
     login,
     register,
+    startSession,
     logout,
     logoutAll,
-    refreshProfile,
     anonymize,
-    setUser,
+    clear,
   }
 })

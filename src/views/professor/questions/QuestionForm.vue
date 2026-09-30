@@ -1,144 +1,99 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, ref, useId } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import type { QuestionAlternative } from "@/types";
-import { mockApi, isApiError } from "@/mock/mockApi";
-import { renderMarkdown } from "@/shared/utils";
-import { useToast } from "@/shared/useToast";
-import { discursiveQuestionSchema, getZodFieldErrors, objectiveQuestionSchema } from "@/shared/validation";
-import FormField from "@/components/FormField.vue";
-import Breadcrumb from "@/components/Breadcrumb.vue";
+import { questionsApi, type QuestionInput } from "@/api/questions";
+import { useToastStore } from "@/stores/toast";
+import { errorMessage } from "@/shared/api/client";
+import { renderMarkdown } from "@/shared/markdown";
+import { MAX_ALTERNATIVES, MIN_ALTERNATIVES, parseTags, questionFormSchema, useZodForm } from "@/shared/validation";
 import AutoResizeTextarea from "@/components/AutoResizeTextarea.vue";
+import BaseButton from "@/components/BaseButton.vue";
+import FormField from "@/components/FormField.vue";
+import IconButton from "@/components/IconButton.vue";
+import LoadingState from "@/components/LoadingState.vue";
 import MarkdownEditor from "@/components/MarkdownEditor.vue";
 import MarkdownPreview from "@/components/MarkdownPreview.vue";
+import PageHeader from "@/components/PageHeader.vue";
+import SelectField from "@/components/SelectField.vue";
 
-function uid(prefix: string) {
-  return `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
+function newAlternative() {
+  return { id: `alt-${crypto.randomUUID().slice(0, 8)}`, text: "" };
 }
 
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
-const isEdit = computed(() => !!route.params.id);
-const loading = ref(false);
-const fieldErrors = ref<Partial<Record<string, string>>>({});
+const toast = useToastStore();
+const questionId = computed(() => (route.params.id ? String(route.params.id) : null));
+const loading = ref(!!questionId.value);
+const loadError = ref("");
+const saving = ref(false);
+const radioName = useId();
 
-const type = ref<"objetiva" | "discursiva">("objetiva");
-const statement = ref("");
-const tagsInput = ref("");
-const maxScore = ref(5);
-const alternatives = ref<QuestionAlternative[]>([
-  { id: "new-a", text: "" },
-  { id: "new-b", text: "" },
-]);
-const correctId = ref("");
-
-const preview = computed(() => renderMarkdown(statement.value));
-
-function clearFieldError(key: string) {
-  if (!fieldErrors.value[key]) return;
-  const next = { ...fieldErrors.value };
-  delete next[key];
-  fieldErrors.value = next;
-}
-
-watch(correctId, (id) => {
-  if (id) clearFieldError("correctAlternativeId");
+const { fields, validate, errorFor, reset } = useZodForm(questionFormSchema, {
+  type: "objetiva",
+  statement: "",
+  tags: "",
+  maxScore: 5,
+  alternatives: [newAlternative(), newAlternative()],
+  correctAlternativeId: "",
 });
 
+const preview = computed(() => renderMarkdown(fields.statement));
+
 function addAlternative() {
-  if (alternatives.value.length >= 5) return;
-  alternatives.value.push({ id: `new-${crypto.randomUUID().slice(0, 4)}`, text: "" });
+  if (fields.alternatives.length < MAX_ALTERNATIVES) fields.alternatives.push(newAlternative());
 }
 
 function removeAlternative(id: string) {
-  if (alternatives.value.length <= 2) return;
-  alternatives.value = alternatives.value.filter((a) => a.id !== id);
-  if (correctId.value === id) correctId.value = "";
+  if (fields.alternatives.length <= MIN_ALTERNATIVES) return;
+  fields.alternatives = fields.alternatives.filter((a) => a.id !== id);
+  if (fields.correctAlternativeId === id) fields.correctAlternativeId = "";
 }
 
 async function load() {
-  if (!isEdit.value) return;
-  loading.value = true;
+  if (!questionId.value) return;
   try {
-    const res = await mockApi.listQuestions({});
-    const q = res.data.find((x) => x.id === route.params.id);
-    if (!q) throw new Error("Questão não encontrada");
-    type.value = q.type;
-    statement.value = q.statement;
-    tagsInput.value = q.tags.join(", ");
-    if (q.type === "discursiva") maxScore.value = q.maxScore ?? 5;
-    else {
-      alternatives.value = q.alternatives ?? [];
-      correctId.value = q.correctAlternativeId ?? "";
-    }
+    const q = await questionsApi.get(questionId.value);
+    reset({
+      type: q.type,
+      statement: q.statement,
+      tags: q.tags.join(", "),
+      maxScore: q.maxScore ?? 5,
+      alternatives: q.alternatives?.length ? q.alternatives : [newAlternative(), newAlternative()],
+      correctAlternativeId: q.correctAlternativeId ?? "",
+    });
   } catch (e) {
-    toast.error(isApiError(e) ? e.message : "Erro ao carregar");
+    loadError.value = errorMessage(e, "Erro ao carregar questão");
   } finally {
     loading.value = false;
   }
 }
 
 async function submit() {
-  fieldErrors.value = {};
-  const tags = tagsInput.value
-    .split(",")
-    .map((t) => t.trim())
-    .filter(Boolean);
+  const data = validate();
+  if (!data) return;
 
+  const input: QuestionInput =
+    data.type === "objetiva"
+      ? {
+          type: "objetiva",
+          statement: data.statement,
+          tags: parseTags(data.tags),
+          alternatives: data.alternatives.map((a) => ({ id: a.id, text: a.text.trim() })),
+          correctAlternativeId: data.correctAlternativeId,
+        }
+      : { type: "discursiva", statement: data.statement, tags: parseTags(data.tags), maxScore: data.maxScore };
+
+  saving.value = true;
   try {
-    if (type.value === "objetiva") {
-      const parsed = objectiveQuestionSchema.safeParse({
-        type: "objetiva",
-        statement: statement.value,
-        tags,
-        alternatives: alternatives.value,
-        correctAlternativeId: correctId.value,
-      });
-
-      if (!parsed.success) {
-        fieldErrors.value = getZodFieldErrors(parsed.error);
-        toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos");
-        return;
-      }
-
-      const idMap = new Map<string, string>();
-      const alts = alternatives.value.map((a) => {
-        const newId = a.id.startsWith("new-") ? uid("alt") : a.id;
-        idMap.set(a.id, newId);
-        return { id: newId, text: a.text };
-      });
-      const mappedCorrect = idMap.get(correctId.value) ?? correctId.value;
-      const data = {
-        type: "objetiva" as const,
-        statement: parsed.data.statement,
-        tags: parsed.data.tags,
-        alternatives: alts,
-        correctAlternativeId: mappedCorrect,
-      };
-      if (isEdit.value) await mockApi.updateQuestion(String(route.params.id), data);
-      else await mockApi.createQuestion(data);
-    } else {
-      const parsed = discursiveQuestionSchema.safeParse({
-        type: "discursiva",
-        statement: statement.value,
-        tags,
-        maxScore: maxScore.value,
-      });
-
-      if (!parsed.success) {
-        fieldErrors.value = getZodFieldErrors(parsed.error);
-        toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos");
-        return;
-      }
-
-      const data = parsed.data;
-      if (isEdit.value) await mockApi.updateQuestion(String(route.params.id), data);
-      else await mockApi.createQuestion(data);
-    }
+    if (questionId.value) await questionsApi.update(questionId.value, input);
+    else await questionsApi.create(input);
+    toast.success("Questão salva.");
     router.push("/professor/questions");
   } catch (e) {
-    toast.error(isApiError(e) ? e.message : "Erro ao salvar");
+    toast.error(errorMessage(e, "Erro ao salvar"));
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -147,68 +102,88 @@ onMounted(load);
 
 <template>
   <div>
-    <Breadcrumb
-      class="mb-6"
+    <PageHeader
       :items="[
         { label: 'Questões', to: '/professor/questions' },
-        { label: isEdit ? 'Editar questão' : 'Nova questão' },
+        { label: questionId ? 'Editar questão' : 'Nova questão' },
       ]"
     />
 
-    <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
+    <LoadingState :loading="loading" :message="loadError" />
+
+    <form
+      v-if="!loading && !loadError"
+      class="rounded-lg border border-border bg-surface p-5 shadow-sm"
+      novalidate
+      @submit.prevent="submit"
+    >
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField v-model="type" as="select" label="Tipo" :disabled="isEdit">
+        <SelectField v-model="fields.type" label="Tipo" size="md" class="mb-4" :disabled="!!questionId">
           <option value="objetiva">Objetiva</option>
           <option value="discursiva">Discursiva</option>
-        </FormField>
+        </SelectField>
         <FormField
-          v-if="type === 'discursiva'"
-          v-model.number="maxScore"
+          v-if="fields.type === 'discursiva'"
+          v-model.number="fields.maxScore"
           label="Pontuação máxima"
           type="number"
           min="0.5"
           step="0.5"
-          :error="fieldErrors.maxScore"
+          :error="errorFor('maxScore')"
         />
       </div>
 
-      <MarkdownEditor id="statement" v-model="statement" label="Enunciado" :error="fieldErrors.statement" />
-      <FormField v-model="tagsInput" label="Tags (separadas por vírgula)" placeholder="matematica, prova1" />
+      <MarkdownEditor id="statement" v-model="fields.statement" label="Enunciado" :error="errorFor('statement')" />
+      <FormField v-model="fields.tags" label="Tags (separadas por vírgula)" placeholder="matematica, prova1" />
 
-      <div
-        v-if="type === 'objetiva'"
+      <fieldset
+        v-if="fields.type === 'objetiva'"
         class="mb-4"
-        :class="{ 'rounded-lg border border-danger p-3': fieldErrors.correctAlternativeId }"
+        :class="{ 'rounded-lg border border-danger p-3': errorFor('correctAlternativeId') }"
+        :aria-describedby="errorFor('correctAlternativeId') || errorFor('alternatives') ? `${radioName}-error` : undefined"
       >
-        <label class="mb-1.5 block text-sm font-medium">Alternativas (2–5)</label>
-        <div v-for="alt in alternatives" :key="alt.id" class="mb-2 flex flex-wrap items-start gap-2">
-          <button
-            type="button"
-            class="mt-1.5 rounded-full border border-border bg-surface p-1 text-xs font-medium text-text transition-colors duration-300 hover:bg-page"
+        <legend class="mb-1.5 block text-sm font-medium">
+          Alternativas ({{ MIN_ALTERNATIVES }}–{{ MAX_ALTERNATIVES }})
+        </legend>
+        <div v-for="(alt, index) in fields.alternatives" :key="alt.id" class="mb-2 flex flex-wrap items-start gap-2">
+          <IconButton
+            class="mt-1.5"
+            icon="ph:trash"
+            icon-class="size-4"
+            :label="`Remover alternativa ${index + 1}`"
+            :disabled="fields.alternatives.length <= MIN_ALTERNATIVES"
             @click="removeAlternative(alt.id)"
-          >
-            <Icon name="ph:trash" class="size-4" />
-          </button>
+          />
           <AutoResizeTextarea
             v-model="alt.text"
             placeholder="Texto da alternativa"
+            :aria-label="`Texto da alternativa ${index + 1}`"
             class="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2"
-            :class="{ 'border-danger': fieldErrors.alternatives }"
+            :class="{ 'border-danger': errorFor('alternatives') && !alt.text.trim() }"
           />
           <label class="mt-2 flex items-center gap-1.5 whitespace-nowrap text-sm">
-            <input v-model="correctId" type="radio" :value="alt.id" /> Correta
+            <input v-model="fields.correctAlternativeId" type="radio" :name="radioName" :value="alt.id" />
+            Correta<span class="sr-only"> (alternativa {{ index + 1 }})</span>
           </label>
         </div>
-        <p v-if="fieldErrors.alternatives" class="text-sm text-danger">{{ fieldErrors.alternatives }}</p>
-        <button
-          v-if="alternatives.length < 5"
-          type="button"
-          class="rounded-lg border border-border bg-surface px-2.5 py-1 text-sm font-medium text-text hover:bg-page gap-1"
+        <p
+          v-if="errorFor('alternatives') || errorFor('correctAlternativeId')"
+          :id="`${radioName}-error`"
+          class="text-sm text-danger"
+        >
+          {{ errorFor("alternatives") || errorFor("correctAlternativeId") }}
+        </p>
+        <BaseButton
+          v-if="fields.alternatives.length < MAX_ALTERNATIVES"
+          variant="secondary"
+          size="sm"
+          icon="ph:plus-bold"
+          class="mt-1"
           @click="addAlternative"
         >
-          <Icon name="ph:plus-bold" class="size-4" /> Adicionar Alternativa
-        </button>
-      </div>
+          Adicionar alternativa
+        </BaseButton>
+      </fieldset>
 
       <h2>Pré-visualização da Questão</h2>
       <div class="mt-4 rounded-lg border border-border bg-page p-5 shadow-sm">
@@ -216,18 +191,8 @@ onMounted(load);
       </div>
 
       <div class="mt-4 flex flex-wrap gap-2">
-        <RouterLink
-          to="/professor/questions"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
-        >
-          Cancelar
-        </RouterLink>
-        <button
-          type="submit"
-          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light"
-        >
-          Salvar
-        </button>
+        <BaseButton variant="secondary" to="/professor/questions">Cancelar</BaseButton>
+        <BaseButton type="submit" :loading="saving">Salvar</BaseButton>
       </div>
     </form>
   </div>

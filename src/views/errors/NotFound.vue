@@ -1,18 +1,15 @@
 <script setup lang="ts">
+import { useAuthStore } from "@/stores/auth";
 import Breadcrumb from "@/components/Breadcrumb.vue";
+import BaseButton from "@/components/BaseButton.vue";
+
+const auth = useAuthStore();
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-linear-to-br from-primary to-primary-light p-4">
-    <div class="w-full max-w-md rounded-lg border border-border bg-surface p-5 text-center shadow-sm">
-      <Breadcrumb class="mb-2 justify-center" :items="[{ label: '404' }]" />
-      <p class="mb-6 text-muted">Página não encontrada.</p>
-      <RouterLink
-        to="/login"
-        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light"
-      >
-        Ir para login
-      </RouterLink>
-    </div>
-  </div>
+  <Breadcrumb class="mb-2 justify-center" :items="[{ label: '404' }]" />
+  <p class="mb-6 text-muted">Página não encontrada.</p>
+  <BaseButton :to="auth.isAuthenticated ? auth.homePath : '/login'">
+    {{ auth.isAuthenticated ? "Ir para o início" : "Ir para login" }}
+  </BaseButton>
 </template>

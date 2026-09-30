@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, useId } from "vue";
-import { applyMarkdownFormat, applyMarkdownIndent, type MarkdownFormat } from "@/shared/markdown";
+import {
+  applyMarkdownFormat,
+  applyMarkdownIndent,
+  shouldIndentOnTab,
+  type MarkdownFormat,
+} from "@/shared/markdown";
 
 defineOptions({ inheritAttrs: false });
 
@@ -24,6 +29,7 @@ const model = defineModel<string>({ required: true });
 const generatedId = useId();
 const fieldId = computed(() => props.id ?? generatedId);
 const hasError = computed(() => Boolean(props.error));
+const errorId = computed(() => `${fieldId.value}-error`);
 const textareaRef = ref<HTMLTextAreaElement | null>(null);
 
 const toolbarItems: { format: MarkdownFormat; label: string; icon: string; shortcut?: string }[] = [
@@ -60,12 +66,25 @@ async function applyIndent(direction: "indent" | "outdent") {
   await updateSelection(result.value, result.selectionStart, result.selectionEnd);
 }
 
+let tabReleased = false;
+
 function onKeydown(event: KeyboardEvent) {
+  if (event.key === "Escape") {
+    tabReleased = true;
+    return;
+  }
+
   if (event.key === "Tab") {
+    const el = event.target as HTMLTextAreaElement;
+    const release = tabReleased;
+    tabReleased = false;
+    if (release || !shouldIndentOnTab(model.value ?? "", el.selectionStart, el.selectionEnd)) return;
     event.preventDefault();
     applyIndent(event.shiftKey ? "outdent" : "indent");
     return;
   }
+
+  tabReleased = false;
 
   if (!event.ctrlKey && !event.metaKey) return;
 
@@ -89,7 +108,10 @@ function onKeydown(event: KeyboardEvent) {
       {{ label }}
     </label>
 
-    <div class="overflow-hidden rounded-lg border bg-white" :class="hasError ? 'border-danger' : 'border-neutral-300'">
+    <div
+      class="overflow-hidden rounded-lg border bg-white focus-within:ring-2 focus-within:ring-primary/30"
+      :class="hasError ? 'border-danger' : 'border-neutral-300'"
+    >
       <div class="flex flex-wrap items-center gap-1 border-b border-border bg-page px-2 py-1.5">
         <button
           v-for="item in toolbarItems"
@@ -110,11 +132,14 @@ function onKeydown(event: KeyboardEvent) {
         v-model="model"
         :rows="rows"
         :placeholder="placeholder"
-        class="w-full resize-y border-0 bg-white px-3 py-2 font-mono text-sm leading-relaxed focus-visible:outline-none"
+        title="Tab indenta listas e seleções de várias linhas. Pressione Esc antes do Tab para sair do campo."
+        :aria-invalid="hasError || undefined"
+        :aria-describedby="hasError ? errorId : undefined"
+        class="w-full resize-y border-0 bg-white px-3 py-2 font-mono text-sm leading-relaxed focus-visible:ring-0"
         v-bind="$attrs"
         @keydown="onKeydown"
       />
     </div>
-    <p v-if="error" class="mt-0.5 text-xs font-medium text-danger">{{ error }}</p>
+    <p v-if="error" :id="errorId" class="mt-0.5 text-xs font-medium text-danger">{{ error }}</p>
   </div>
 </template>

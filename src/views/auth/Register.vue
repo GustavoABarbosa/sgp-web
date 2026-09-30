@@ -1,34 +1,41 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useToastStore } from '@/stores/toast'
 import type { UserRole } from '@/types'
-import AuthFormHeader from '@/components/AuthFormHeader.vue'
-import FormField from '@/components/FormField.vue'
-import EmailInputGroup from '@/components/EmailInputGroup.vue'
+import { errorMessage } from '@/shared/api/client'
 import { emailDomainForRole, registerSchema, useZodForm } from '@/shared/validation'
-import { useToast } from '@/shared/useToast'
+import AuthFormHeader from '@/components/AuthFormHeader.vue'
+import BaseButton from '@/components/BaseButton.vue'
+import EmailInputGroup from '@/components/EmailInputGroup.vue'
+import FormField from '@/components/FormField.vue'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
-const toast = useToast()
+const toast = useToastStore()
+const submitting = ref(false)
 
 const role = computed(() => route.params.role as UserRole)
 const isProfessor = computed(() => role.value === 'professor')
 const domain = computed(() => emailDomainForRole(role.value))
 
-const { fields, validate, errorFor } = useZodForm(registerSchema(role.value), {
-  fullName: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
-})
+const { fields, validate, errorFor } = useZodForm(
+  computed(() => registerSchema(role.value)),
+  {
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  },
+)
 
 async function submit() {
   const data = validate()
   if (!data) return
 
+  submitting.value = true
   try {
     await auth.register({
       role: role.value,
@@ -37,62 +44,51 @@ async function submit() {
       password: data.password,
     })
     toast.success('Conta criada com sucesso.')
-    router.push(isProfessor.value ? '/professor/dashboard' : '/aluno/dashboard')
-  } catch {
-    toast.error(auth.error ?? 'Erro ao cadastrar')
+    router.push(auth.homePath)
+  } catch (e) {
+    toast.error(errorMessage(e, 'Erro ao cadastrar'))
+  } finally {
+    submitting.value = false
   }
 }
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-linear-to-br from-primary to-primary-light p-4">
-    <div class="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <AuthFormHeader
-        logo
-        title="Cadastro"
-        :description="`${isProfessor ? 'Professor' : 'Aluno'}, use o e-mail ${domain}`"
-      />
+  <AuthFormHeader
+    logo
+    title="Cadastro"
+    :description="`${isProfessor ? 'Professor' : 'Aluno'}, use o e-mail ${domain}`"
+  />
 
-      <form @submit.prevent="submit">
-        <FormField
-          id="name"
-          v-model="fields.fullName"
-          label="Nome completo"
-          placeholder="Nome e sobrenome"
-          :error="errorFor('fullName')"
-        />
-        <EmailInputGroup
-          id="email"
-          v-model="fields.email"
-          label="E-mail"
-          :domain="domain"
-          :error="errorFor('email')"
-        />
-        <FormField
-          id="password"
-          v-model="fields.password"
-          label="Senha (mín. 8 caracteres)"
-          type="password"
-          :error="errorFor('password')"
-        />
-        <FormField
-          id="confirm"
-          v-model="fields.confirmPassword"
-          label="Confirmar senha"
-          type="password"
-          :error="errorFor('confirmPassword')"
-        />
-        <button
-          type="submit"
-          :disabled="auth.loading"
-          class="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-55"
-        >
-          Cadastrar
-        </button>
-      </form>
-      <p class="mt-5 text-sm">
-        <RouterLink to="/login" class="text-primary-light no-underline">Já tenho conta</RouterLink>
-      </p>
-    </div>
-  </div>
+  <form @submit.prevent="submit">
+    <FormField
+      id="name"
+      v-model="fields.fullName"
+      label="Nome completo"
+      placeholder="Nome e sobrenome"
+      autocomplete="name"
+      :error="errorFor('fullName')"
+    />
+    <EmailInputGroup id="email" v-model="fields.email" label="E-mail" :domain="domain" :error="errorFor('email')" />
+    <FormField
+      id="password"
+      v-model="fields.password"
+      label="Senha (mín. 8 caracteres)"
+      type="password"
+      autocomplete="new-password"
+      :error="errorFor('password')"
+    />
+    <FormField
+      id="confirm"
+      v-model="fields.confirmPassword"
+      label="Confirmar senha"
+      type="password"
+      autocomplete="new-password"
+      :error="errorFor('confirmPassword')"
+    />
+    <BaseButton type="submit" class="mt-2" block :loading="submitting">Cadastrar</BaseButton>
+  </form>
+  <p class="mt-5 text-sm">
+    <RouterLink to="/login" class="text-primary-light no-underline">Já tenho conta</RouterLink>
+  </p>
 </template>

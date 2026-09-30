@@ -1,130 +1,75 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { computed, ref } from "vue";
 import type { StudentGrade } from "@/types";
-import { mockApi } from "@/mock/mockApi";
+import { studentApi } from "@/api/student";
 import { formatDate } from "@/shared/utils";
+import { useResource } from "@/shared/useResource";
+import BaseCard from "@/components/BaseCard.vue";
+import DataTable, { type Column } from "@/components/DataTable.vue";
 import LoadingState from "@/components/LoadingState.vue";
-import Breadcrumb from "@/components/Breadcrumb.vue";
+import PageHeader from "@/components/PageHeader.vue";
+import SelectField from "@/components/SelectField.vue";
+import SimpleBarChart from "@/components/SimpleBarChart.vue";
 
-const router = useRouter();
-const grades = ref<StudentGrade[]>([]);
-const loading = ref(true);
+const { data, isLoading, error } = useResource(studentApi.grades);
 const subject = ref("");
 const term = ref("");
 
-async function load() {
-  loading.value = true;
-  grades.value = await mockApi.studentGrades({
-    subject: subject.value || undefined,
-    term: term.value || undefined,
-  });
-  loading.value = false;
-}
+const allGrades = computed(() => data.value ?? []);
+const subjects = computed(() => [...new Set(allGrades.value.map((g) => g.subject))].sort());
+const terms = computed(() => [...new Set(allGrades.value.map((g) => g.term))].sort());
 
-watch([subject, term], load);
-onMounted(load);
+const grades = computed(() =>
+  allGrades.value.filter((g) => (!subject.value || g.subject === subject.value) && (!term.value || g.term === term.value)),
+);
 
-const chartPoints = ref<{ label: string; score: number; max: number }[]>([]);
-
-watch(grades, (g) => {
-  chartPoints.value = [...g]
+const chartData = computed(() =>
+  [...grades.value]
     .sort((a, b) => new Date(a.correctedAt).getTime() - new Date(b.correctedAt).getTime())
-    .map((gr) => ({
-      label: gr.examTitle,
-      score: gr.totalScore,
-      max: gr.maxScore,
-    }));
-});
+    .map((g) => ({ label: g.examTitle, value: g.totalScore, max: g.maxScore, caption: `${g.totalScore}/${g.maxScore}` })),
+);
+
+const columns: Column[] = [
+  { key: "examTitle", label: "Prova", class: "min-w-40" },
+  { key: "subject", label: "Disciplina", class: "min-w-40" },
+  { key: "score", label: "Nota", align: "center", class: "min-w-20" },
+  { key: "professorName", label: "Professor", class: "min-w-40" },
+  { key: "correctedAt", label: "Data", align: "center", class: "min-w-20" },
+];
 </script>
 
 <template>
   <div>
-    <Breadcrumb class="mb-6" :items="[{ label: 'Histórico de notas' }]" />
+    <PageHeader :items="[{ label: 'Histórico de notas' }]" />
 
     <div class="mb-4 flex flex-wrap gap-3">
-      <input
-        v-model="subject"
-        placeholder="Filtrar disciplina"
-        class="rounded-lg border border-border bg-white px-3 py-2"
-      />
-      <input v-model="term" placeholder="Filtrar período" class="rounded-lg border border-border bg-white px-3 py-2" />
+      <SelectField v-model="subject" label="Disciplina" hide-label size="md">
+        <option value="">Todas as disciplinas</option>
+        <option v-for="s in subjects" :key="s" :value="s">{{ s }}</option>
+      </SelectField>
+      <SelectField v-model="term" label="Período" hide-label size="md">
+        <option value="">Todos os períodos</option>
+        <option v-for="t in terms" :key="t" :value="t">{{ t }}</option>
+      </SelectField>
     </div>
 
-    <div v-if="chartPoints.length" class="rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <h2>Evolução</h2>
-      <div class="mt-4 flex h-44 items-end gap-2" @click="console.log(chartPoints)">
-        <div v-for="(p, i) in chartPoints" :key="i" class="flex min-w-0 flex-1 flex-col items-center gap-1">
-          <div class="w-full min-h-1 rounded-t bg-primary" :style="{ height: `${(p.score / p.max) * 100}px` }" />
-          <span class="text-center text-xs text-muted">{{ p.label }}</span>
-          <span class="text-xs font-medium text-text">{{ p.score }}/{{ p.max }}</span>
-        </div>
-      </div>
-    </div>
+    <BaseCard v-if="chartData.length" title="Evolução">
+      <SimpleBarChart :data="chartData" label="Nota de cada prova em relação à nota máxima, em ordem cronológica" />
+    </BaseCard>
 
-    <LoadingState :loading="loading" :message="grades.length ? '' : 'Nenhuma nota registrada'" />
+    <LoadingState :loading="isLoading && !data" :message="error" />
 
-    <div v-if="grades.length" class="overflow-hidden mt-4 rounded-lg border border-border bg-surface shadow-sm">
-      <div class="overflow-x-auto">
-        <table class="w-full border-collapse text-sm">
-          <thead>
-            <tr>
-              <th
-                class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-              >
-                Prova
-              </th>
-              <th
-                class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-              >
-                Disciplina
-              </th>
-              <th
-                class="border-b border-border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted"
-              >
-                Nota
-              </th>
-              <th
-                class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-              >
-                Professor
-              </th>
-              <th
-                class="border-b border-border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted"
-              >
-                Data
-              </th>
-              <th
-                class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-              ></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="g in grades"
-              :key="g.applicationId"
-              class="hover:bg-page cursor-pointer transition-colors duration-300"
-              @click="router.push(`/aluno/grades/${g.applicationId}`)"
-            >
-              <td class="border-b border-border px-3 py-2 min-w-40">{{ g.examTitle }}</td>
-              <td class="border-b border-border px-3 py-2 min-w-40">{{ g.subject }}</td>
-              <td class="border-b border-border px-3 py-2 min-w-20 text-center">
-                <strong>{{ g.totalScore }}</strong> / {{ g.maxScore }}
-              </td>
-              <td class="border-b border-border px-3 py-2 min-w-40">{{ g.professorName }}</td>
-              <td class="border-b border-border px-3 py-2 min-w-20 text-center">{{ formatDate(g.correctedAt) }}</td>
-              <td class="border-b border-border px-2 py-2 min-w-8 text-center">
-                <button
-                  class="rounded-full border border-border bg-surface p-1 text-muted hover:bg-page"
-                  @click="router.push(`/aluno/grades/${g.applicationId}`)"
-                >
-                  <Icon name="ph:eye" class="size-5" />
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <BaseCard v-if="data" class="mt-4">
+      <DataTable
+        :columns="columns"
+        :rows="grades"
+        :row-key="(g: StudentGrade) => g.applicationId"
+        :row-to="(g: StudentGrade) => `/aluno/grades/${g.applicationId}`"
+        empty="Nenhuma nota registrada"
+      >
+        <template #cell-score="{ row }"><strong>{{ row.totalScore }}</strong> / {{ row.maxScore }}</template>
+        <template #cell-correctedAt="{ row }">{{ formatDate(row.correctedAt) }}</template>
+      </DataTable>
+    </BaseCard>
   </div>
 </template>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { mockApi, isApiError } from "@/mock/mockApi";
-import FormField from "@/components/FormField.vue";
-import Breadcrumb from "@/components/Breadcrumb.vue";
+import { classesApi } from "@/api/classes";
+import { errorMessage } from "@/shared/api/client";
 import { classFormSchema, useZodForm } from "@/shared/validation";
+import BaseButton from "@/components/BaseButton.vue";
+import FormField from "@/components/FormField.vue";
+import PageHeader from "@/components/PageHeader.vue";
 
 const router = useRouter();
 const { fields, validate, errorFor } = useZodForm(classFormSchema, {
@@ -13,46 +15,40 @@ const { fields, validate, errorFor } = useZodForm(classFormSchema, {
   term: "2026/1",
 });
 const error = ref("");
+const saving = ref(false);
 
 async function submit() {
   error.value = "";
   const data = validate();
   if (!data) return;
 
+  saving.value = true;
   try {
-    const cls = await mockApi.createClass(data);
+    const cls = await classesApi.create(data);
     router.push(`/professor/classes/${cls.id}`);
   } catch (e) {
-    error.value = isApiError(e) ? e.message : "Erro";
+    error.value = errorMessage(e, "Erro ao criar turma");
+  } finally {
+    saving.value = false;
   }
 }
 </script>
 
 <template>
   <div>
-    <Breadcrumb class="mb-6" :items="[{ label: 'Turmas', to: '/professor/classes' }, { label: 'Nova turma' }]" />
-    <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
-      <div class="grid grid-cols-2 gap-4">
-        <div class="col-span-2">
-          <FormField v-model="fields.name" label="Nome" :error="errorFor('name')" class="col-span-2" />
+    <PageHeader :items="[{ label: 'Turmas', to: '/professor/classes' }, { label: 'Nova turma' }]" />
+    <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" novalidate @submit.prevent="submit">
+      <div class="grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+        <div class="sm:col-span-2">
+          <FormField v-model="fields.name" label="Nome" :error="errorFor('name')" />
         </div>
         <FormField v-model="fields.subject" label="Disciplina" :error="errorFor('subject')" />
         <FormField v-model="fields.term" label="Período / Ano letivo" placeholder="2026/1" :error="errorFor('term')" />
       </div>
-      <p v-if="error" class="text-sm text-danger">{{ error }}</p>
+      <p v-if="error" role="alert" class="text-sm text-danger">{{ error }}</p>
       <div class="mt-4 flex flex-wrap gap-2">
-        <RouterLink
-          to="/professor/classes"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
-        >
-          Cancelar
-        </RouterLink>
-        <button
-          type="submit"
-          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light"
-        >
-          Criar turma
-        </button>
+        <BaseButton variant="secondary" to="/professor/classes">Cancelar</BaseButton>
+        <BaseButton type="submit" :loading="saving">Criar turma</BaseButton>
       </div>
     </form>
   </div>

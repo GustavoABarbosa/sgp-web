@@ -38,7 +38,11 @@ const progressByType: Record<ToastType, string> = {
         v-for="toast in toasts"
         :key="toast.id"
         class="pointer-events-auto overflow-hidden rounded-lg bg-surface shadow-lg"
-        role="status"
+        :role="toast.type === 'error' ? 'alert' : 'status'"
+        @mouseenter="toastStore.pause(toast.id)"
+        @mouseleave="toastStore.resume(toast.id)"
+        @focusin="toastStore.pause(toast.id)"
+        @focusout="toastStore.resume(toast.id)"
       >
         <div class="flex items-start gap-3 p-3">
           <div
@@ -61,15 +65,14 @@ const progressByType: Record<ToastType, string> = {
           </button>
         </div>
 
-        <div
-          v-if="toast.duration > 0"
-          class="h-1 bg-border/60"
-          :aria-label="`Fecha em ${Math.round(toast.duration / 1000)} segundos`"
-        >
+        <div v-if="toast.duration > 0" class="h-1 bg-border/60" aria-hidden="true">
           <div
             class="toast-unload h-full origin-left"
             :class="progressByType[toast.type]"
-            :style="{ animationDuration: `${toast.duration}ms` }"
+            :style="{
+              animationDuration: `${toast.duration}ms`,
+              animationPlayState: toast.paused ? 'paused' : 'running',
+            }"
           />
         </div>
       </div>

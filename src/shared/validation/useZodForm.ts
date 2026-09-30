@@ -1,4 +1,4 @@
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, toValue, watch, type MaybeRefOrGetter } from 'vue'
 import type { ZodError, ZodType } from 'zod'
 
 export function getZodFieldErrors(error: ZodError): Partial<Record<string, string>> {
@@ -14,7 +14,11 @@ export function getZodFieldErrors(error: ZodError): Partial<Record<string, strin
   return fieldErrors
 }
 
-export function useZodForm<T extends Record<string, unknown>>(schema: ZodType<T>, initial: T) {
+export function useZodForm<T extends Record<string, unknown>>(
+  schemaSource: MaybeRefOrGetter<ZodType<T>>,
+  initial: T,
+) {
+  const schema = { safeParse: (value: unknown) => toValue(schemaSource).safeParse(value) }
   const fields = reactive({ ...initial }) as T
   const fieldErrors = ref<Partial<Record<keyof T & string, string>>>({})
   const hasValidated = ref(false)
@@ -43,6 +47,11 @@ export function useZodForm<T extends Record<string, unknown>>(schema: ZodType<T>
     hasValidated.value = false
   }
 
+  function reset(values: T) {
+    Object.assign(fields, values)
+    clearErrors()
+  }
+
   watch(
     fields,
     () => {
@@ -52,5 +61,5 @@ export function useZodForm<T extends Record<string, unknown>>(schema: ZodType<T>
     { deep: true },
   )
 
-  return { fields, fieldErrors, validate, errorFor, clearErrors }
+  return { fields, fieldErrors, validate, errorFor, clearErrors, reset }
 }

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { nextTick, ref, useId, watch } from 'vue'
 import { onKeyStroke } from '@vueuse/core'
 
 defineProps<{
@@ -6,13 +7,28 @@ defineProps<{
 }>()
 
 const open = defineModel<boolean>({ required: true })
+const titleId = useId()
+const panel = ref<HTMLElement | null>(null)
+let returnFocusTo: HTMLElement | null = null
 
 function close() {
   open.value = false
 }
 
-onKeyStroke('Escape', () => {
-  if (open.value) close()
+watch(open, async (value) => {
+  if (value) {
+    returnFocusTo = document.activeElement as HTMLElement | null
+    await nextTick()
+    panel.value?.focus()
+  } else {
+    returnFocusTo?.focus()
+    returnFocusTo = null
+  }
+})
+
+onKeyStroke('Escape', (event) => {
+  if (!open.value || event.defaultPrevented) return
+  close()
 })
 </script>
 
@@ -24,7 +40,7 @@ onKeyStroke('Escape', () => {
       enter-from-class="opacity-0"
       leave-to-class="opacity-0"
     >
-      <div v-if="open" class="fixed inset-0 z-50 bg-black/45" @click="close" />
+      <div v-if="open" class="fixed inset-0 z-50 bg-black/45" aria-hidden="true" @click="close" />
     </Transition>
     <Transition
       enter-active-class="transition-transform duration-200 ease-out"
@@ -34,15 +50,19 @@ onKeyStroke('Escape', () => {
     >
       <div
         v-if="open"
-        class="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col bg-surface shadow-2xl"
+        ref="panel"
+        tabindex="-1"
+        class="fixed inset-y-0 right-0 z-50 flex w-full max-w-lg flex-col bg-surface shadow-2xl focus:outline-none"
         role="dialog"
         aria-modal="true"
+        :aria-labelledby="titleId"
       >
         <div class="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
-          <h2 class="mb-0">{{ title }}</h2>
+          <h2 :id="titleId" class="mb-0">{{ title }}</h2>
           <button
             type="button"
             class="rounded-full p-1 text-muted hover:bg-page hover:text-text"
+            aria-label="Fechar"
             title="Fechar"
             @click="close"
           >

@@ -157,6 +157,30 @@ export interface AnswerKey {
   items: AnswerKeyItem[]
 }
 
+export interface ApplicationSummary extends Application {
+  examTitle: string
+  className: string
+}
+
+export interface ApplicationDetail {
+  application: Application
+  exam: Exam
+  class: Class
+}
+
+export interface ClassStudent {
+  enrollment: ClassEnrollment
+  student: User
+}
+
+export interface ProfessorSummary {
+  questions: number
+  activeClasses: number
+  exams: number
+  applications: number
+  pendingCorrections: number
+}
+
 export interface StudentExam {
   applicationId: string
   examTitle: string
@@ -164,6 +188,7 @@ export interface StudentExam {
   subject: string
   term: string
   appliedAt: string
+  hasGrade: boolean
 }
 
 export interface StudentGrade {
@@ -178,9 +203,17 @@ export interface StudentGrade {
   professorName: string
 }
 
+export interface StudentQuestionResult {
+  number: number
+  questionId: string
+  type: 'objetiva' | 'discursiva'
+  correct?: boolean
+  score: number
+  maxScore: number
+}
+
 export interface StudentGradeDetail extends StudentGrade {
-  objectiveResults: ObjectiveResult[]
-  discursiveScores: DiscursiveScore[]
+  results: StudentQuestionResult[]
   answerKeyAvailable: boolean
   answerKey?: AnswerKeyItem[]
 }
@@ -215,10 +248,14 @@ export interface AuthTokens {
   refreshToken: string
 }
 
-export interface ApiError {
-  message: string
-  code?: string
-  status: number
+export interface AuthSession extends AuthTokens {
+  user: User
+}
+
+export interface JoinClassResult {
+  class: Class
+  user: User
+  session: AuthSession | null
 }
 
 export interface Paginated<T> {

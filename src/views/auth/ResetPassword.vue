@@ -1,71 +1,70 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { mockApi, isApiError } from '@/mock/mockApi'
-import FormField from '@/components/FormField.vue'
-import Breadcrumb from '@/components/Breadcrumb.vue'
+import { authApi } from '@/api/auth'
+import { useToastStore } from '@/stores/toast'
+import { errorMessage } from '@/shared/api/client'
 import { resetPasswordSchema, useZodForm } from '@/shared/validation'
-import { useToast } from '@/shared/useToast'
+import Breadcrumb from '@/components/Breadcrumb.vue'
+import BaseButton from '@/components/BaseButton.vue'
+import FormField from '@/components/FormField.vue'
 
 const route = useRoute()
 const router = useRouter()
-const toast = useToast()
+const toast = useToastStore()
+const token = computed(() => (typeof route.query.token === 'string' ? route.query.token : ''))
 const { fields, validate, errorFor } = useZodForm(resetPasswordSchema, {
   password: '',
   confirmPassword: '',
 })
-const loading = ref(false)
+const submitting = ref(false)
 
 async function submit() {
   const data = validate()
   if (!data) return
 
-  loading.value = true
+  submitting.value = true
   try {
-    await mockApi.resetPassword(String(route.query.token ?? ''), data.password)
+    await authApi.resetPassword(token.value, data.password)
     toast.success('Senha redefinida com sucesso.')
     router.push('/login')
   } catch (e) {
-    toast.error(isApiError(e) ? e.message : 'Erro ao redefinir senha')
+    toast.error(errorMessage(e, 'Erro ao redefinir senha'))
   } finally {
-    loading.value = false
+    submitting.value = false
   }
 }
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-linear-to-br from-primary to-primary-light p-4">
-    <div class="w-full max-w-md rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <Breadcrumb
-        class="mb-6"
-        :items="[
-          { label: 'Login', to: '/login' },
-          { label: 'Nova senha' },
-        ]"
-      />
-      <form @submit.prevent="submit">
-        <FormField
-          id="password"
-          v-model="fields.password"
-          label="Nova senha"
-          type="password"
-          :error="errorFor('password')"
-        />
-        <FormField
-          id="confirm"
-          v-model="fields.confirmPassword"
-          label="Confirmar"
-          type="password"
-          :error="errorFor('confirmPassword')"
-        />
-        <button
-          type="submit"
-          :disabled="loading"
-          class="mt-2 inline-flex w-full items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-55"
-        >
-          Redefinir
-        </button>
-      </form>
-    </div>
+  <Breadcrumb
+    class="mb-6"
+    :items="[
+      { label: 'Login', to: '/login' },
+      { label: 'Nova senha' },
+    ]"
+  />
+  <div v-if="!token" role="alert" class="text-sm">
+    <p class="mb-4 text-danger">Link inválido ou expirado.</p>
+    <RouterLink to="/forgot-password" class="text-primary-light">Solicitar um novo link</RouterLink>
   </div>
+  <form v-else @submit.prevent="submit">
+    <FormField
+      id="password"
+      v-model="fields.password"
+      label="Nova senha"
+      type="password"
+      autocomplete="new-password"
+      :error="errorFor('password')"
+    />
+    <FormField
+      id="confirm"
+      v-model="fields.confirmPassword"
+      label="Confirmar"
+      type="password"
+      autocomplete="new-password"
+      :error="errorFor('confirmPassword')"
+    />
+    <BaseButton type="submit" class="mt-2" block :loading="submitting">Redefinir</BaseButton>
+  </form>
 </template>

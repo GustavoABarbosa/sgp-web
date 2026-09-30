@@ -1,142 +1,88 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
+import { ref, watch } from "vue";
 import type { Exam } from "@/types";
-import { mockApi, isApiError } from "@/mock/mockApi";
-import StatusBadge from "@/components/StatusBadge.vue";
+import { examsApi } from "@/api/exams";
+import { useToastStore } from "@/stores/toast";
+import { errorMessage } from "@/shared/api/client";
+import { useConfirm } from "@/shared/useConfirm";
+import { useResource } from "@/shared/useResource";
+import BaseButton from "@/components/BaseButton.vue";
+import BaseCard from "@/components/BaseCard.vue";
+import DataTable, { type Column } from "@/components/DataTable.vue";
 import LoadingState from "@/components/LoadingState.vue";
-import ConfirmModal from "@/components/ConfirmModal.vue";
-import Breadcrumb from "@/components/Breadcrumb.vue";
-import { statusLabel } from "@/shared/utils";
+import PageHeader from "@/components/PageHeader.vue";
+import SelectField from "@/components/SelectField.vue";
+import StatusBadge from "@/components/StatusBadge.vue";
 
-const router = useRouter();
-const exams = ref<Exam[]>([]);
-const loading = ref(true);
-const statusFilter = ref("");
-const showArchiveModal = ref(false);
-const examToArchive = ref<string | null>(null);
-const archiveError = ref("");
+const toast = useToastStore();
+const confirm = useConfirm();
+const statusFilter = ref<"" | Exam["status"]>("");
 
-async function load() {
-  loading.value = true;
-  exams.value = await mockApi.listExams(statusFilter.value || undefined);
-  loading.value = false;
-}
+const { data: exams, isLoading, error, reload } = useResource(
+  () => examsApi.list(statusFilter.value || undefined),
+  "Erro ao carregar provas",
+);
 
-function requestArchive(id: string) {
-  examToArchive.value = id;
-  showArchiveModal.value = true;
-}
+const columns: Column[] = [
+  { key: "title", label: "Título" },
+  { key: "questions", label: "Questões", align: "center" },
+  { key: "status", label: "Status", align: "center" },
+  { key: "actions", label: "Ações", hideLabel: true, align: "right" },
+];
 
-async function confirmArchive() {
-  if (!examToArchive.value) return;
+async function requestArchive(exam: Exam) {
+  const ok = await confirm({
+    title: "Arquivar prova",
+    message: "Deseja arquivar esta prova? Ela não poderá mais ser editada.",
+    confirmLabel: "Arquivar",
+  });
+  if (!ok) return;
   try {
-    await mockApi.archiveExam(examToArchive.value);
-    showArchiveModal.value = false;
-    examToArchive.value = null;
-    archiveError.value = "";
-    load();
+    await examsApi.archive(exam.id);
+    toast.success("Prova arquivada.");
+    reload();
   } catch (e) {
-    archiveError.value = isApiError(e) ? e.message : "Erro ao arquivar";
+    toast.error(errorMessage(e, "Erro ao arquivar"));
   }
 }
 
-function cancelArchive() {
-  examToArchive.value = null;
-  archiveError.value = "";
-}
-
-watch(statusFilter, load);
-onMounted(load);
+watch(statusFilter, reload);
 </script>
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <Breadcrumb :items="[{ label: 'Provas' }]" />
-      <RouterLink
-        to="/professor/exams/new"
-        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white no-underline hover:bg-primary-light flex gap-1 items-center"
-      >
-        <Icon name="ph:plus-bold" class="size-4" />
-        <span>Nova prova</span>
-      </RouterLink>
-    </div>
+    <PageHeader :items="[{ label: 'Provas' }]">
+      <BaseButton to="/professor/exams/new" icon="ph:plus-bold">Nova prova</BaseButton>
+    </PageHeader>
 
     <div class="mb-4 flex flex-wrap gap-3">
-      <select v-model="statusFilter" class="rounded-lg border border-border bg-white px-3 py-2">
+      <SelectField v-model="statusFilter" label="Status" hide-label size="md">
         <option value="">Todos</option>
         <option value="draft">Rascunho</option>
         <option value="ready">Pronta</option>
         <option value="closed">Arquivada</option>
-      </select>
+      </SelectField>
     </div>
 
-    <LoadingState :loading="loading" :message="exams.length ? '' : 'Nenhuma prova'" />
+    <LoadingState :loading="isLoading && !exams" :message="error" />
 
-    <div v-if="exams.length" class="rounded-lg border border-border bg-surface p-5 shadow-sm">
-      <table class="w-full border-collapse text-sm">
-        <thead>
-          <tr>
-            <th
-              class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-            >
-              Título
-            </th>
-            <th
-              class="border-b border-border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted"
-            >
-              Questões
-            </th>
-            <th
-              class="border-b border-border px-3 py-2.5 text-center text-xs font-semibold uppercase tracking-wide text-muted"
-            >
-              Status
-            </th>
-            <th
-              class="border-b border-border px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-muted"
-            ></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="e in exams" :key="e.id">
-            <td class="border-b border-border px-3 py-2.5">{{ e.title }}</td>
-            <td class="border-b border-border px-3 py-2.5 text-center">{{ e.questions.length }}</td>
-            <td class="border-b border-border px-3 py-2.5 text-center">
-              <StatusBadge :status="e.status">{{ statusLabel(e.status) }}</StatusBadge>
-            </td>
-            <td class="border-b border-border px-3 py-2.5">
-              <div class="flex justify-end gap-2">
-                <button
-                  v-if="e.status !== 'closed'"
-                  class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
-                  @click="router.push(`/professor/exams/${e.id}/edit`)"
-                >
-                  Editar
-                </button>
-                <button
-                  v-if="e.status !== 'closed'"
-                  class="rounded-lg bg-danger px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700"
-                  @click="requestArchive(e.id)"
-                >
-                  Arquivar
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <ConfirmModal
-      v-model="showArchiveModal"
-      title="Arquivar prova"
-      confirm-label="Arquivar"
-      @cancel="cancelArchive"
-      @confirm="confirmArchive"
-    >
-      <p>Deseja arquivar esta prova? Ela não poderá mais ser editada.</p>
-      <p v-if="archiveError" class="text-sm text-danger">{{ archiveError }}</p>
-    </ConfirmModal>
+    <BaseCard v-if="exams && !error">
+      <DataTable :columns="columns" :rows="exams" :row-key="(e: Exam) => e.id" empty="Nenhuma prova">
+        <template #cell-questions="{ row }">{{ row.questions.length }}</template>
+        <template #cell-status="{ row }">
+          <StatusBadge :status="row.status" />
+        </template>
+        <template #cell-actions="{ row }">
+          <div v-if="row.status !== 'closed'" class="flex justify-end gap-2">
+            <BaseButton variant="secondary" size="sm" :to="`/professor/exams/${row.id}/edit`">
+              Editar<span class="sr-only"> {{ row.title }}</span>
+            </BaseButton>
+            <BaseButton variant="danger" size="sm" @click="requestArchive(row)">
+              Arquivar<span class="sr-only"> {{ row.title }}</span>
+            </BaseButton>
+          </div>
+        </template>
+      </DataTable>
+    </BaseCard>
   </div>
 </template>

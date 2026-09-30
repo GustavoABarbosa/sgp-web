@@ -29,6 +29,7 @@ const emit = defineEmits<{ enter: [] }>()
 const generatedId = useId()
 const fieldId = computed(() => props.id ?? generatedId)
 const hasError = computed(() => Boolean(props.error))
+const errorId = computed(() => `${fieldId.value}-error`)
 
 const selectableDomains = computed(
   () => props.domains ?? (props.domain ? [props.domain] : [...EMAIL_DOMAINS]),
@@ -106,7 +107,7 @@ const domainLabel = computed(() => {
 
     <div class="flex items-stretch gap-2">
       <div
-        class="flex min-w-0 flex-1 overflow-hidden rounded-lg bg-white"
+        class="flex min-w-0 flex-1 overflow-hidden rounded-lg bg-white focus-within:ring-2 focus-within:ring-primary/30"
         :class="hasError ? 'border border-danger' : 'border border-border'"
       >
         <input
@@ -115,7 +116,9 @@ const domainLabel = computed(() => {
           type="text"
           :placeholder="placeholder"
           :autocomplete="autocomplete"
-          class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 outline-none"
+          :aria-invalid="hasError || undefined"
+          :aria-describedby="hasError ? errorId : undefined"
+          class="min-w-0 flex-1 border-0 bg-transparent px-3 py-2 outline-none focus-visible:ring-0"
           @input="emitEmail"
           @blur="emitEmail"
           @keydown.enter="emit('enter')"
@@ -123,7 +126,7 @@ const domainLabel = computed(() => {
         <select
           v-if="canSelectDomain"
           v-model="selectedDomain"
-          class="max-w-[11.5rem] shrink-0 appearance-none border-l border-border bg-page py-2 pl-2 pr-7 text-sm font-semibold text-text/80 outline-none"
+          class="max-w-[11.5rem] shrink-0 appearance-none border-l border-border bg-page py-2 pl-2 pr-7 text-sm font-semibold text-text/80 outline-none focus-visible:ring-0"
           :aria-label="`Domínio (${domainLabel})`"
         >
           <option v-for="d in selectableDomains" :key="d" :value="d">{{ d }}</option>
@@ -138,6 +141,6 @@ const domainLabel = computed(() => {
       <slot name="action" />
     </div>
 
-    <p v-if="error" class="mt-0.5 text-xs font-medium text-danger">{{ error }}</p>
+    <p v-if="error" :id="errorId" class="mt-0.5 text-xs font-medium text-danger">{{ error }}</p>
   </div>
 </template>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onMounted, ref, useId, watch } from 'vue'
+
 withDefaults(
   defineProps<{
     title: string
@@ -11,30 +13,42 @@ withDefaults(
 
 const open = defineModel<boolean>({ required: true })
 
+const titleId = useId()
+const dialogRef = ref<HTMLDialogElement | null>(null)
+
+function sync(value: boolean) {
+  const el = dialogRef.value
+  if (!el) return
+  if (value && !el.open) el.showModal()
+  else if (!value && el.open) el.close()
+}
+
+watch(open, sync, { flush: 'post' })
+onMounted(() => sync(open.value))
+
 function close() {
   open.value = false
 }
 </script>
 
 <template>
-  <div
-    v-if="open"
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4"
+  <dialog
+    ref="dialogRef"
+    :aria-labelledby="titleId"
+    class="m-auto max-h-[90vh] w-[calc(100%-2rem)] flex-col rounded-lg bg-surface p-0 text-text shadow-2xl backdrop:bg-black/45 open:flex"
+    :class="size === 'lg' ? 'max-w-4xl' : 'max-w-md'"
+    @close="close"
     @click.self="close"
   >
-    <div
-      class="flex max-h-[90vh] w-full flex-col rounded-lg bg-surface shadow-2xl"
-      :class="size === 'lg' ? 'max-w-4xl' : 'max-w-md'"
-      role="dialog"
-      aria-modal="true"
-    >
+    <template v-if="open">
       <div class="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
-        <h2 class="mb-0">{{ title }}</h2>
+        <h2 :id="titleId" class="mb-0">{{ title }}</h2>
         <div class="flex items-center gap-2">
           <slot name="actions" :close="close" />
           <button
             type="button"
             class="rounded-full p-1 text-muted hover:bg-page hover:text-text"
+            aria-label="Fechar"
             title="Fechar"
             @click="close"
           >
@@ -48,6 +62,6 @@ function close() {
       <div v-if="$slots.footer" class="flex justify-end gap-2 border-t border-border px-6 py-4">
         <slot name="footer" :close="close" />
       </div>
-    </div>
-  </div>
+    </template>
+  </dialog>
 </template>

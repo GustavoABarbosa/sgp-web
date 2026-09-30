@@ -23,12 +23,12 @@ const model = defineModel<string | number>({ required: true })
 const generatedId = useId()
 const fieldId = computed(() => props.id ?? generatedId)
 const hasError = computed(() => Boolean(props.error))
+const errorId = computed(() => `${fieldId.value}-error`)
 
 const controlClass = computed(() => [
   'w-full rounded-lg border bg-white px-3 py-2',
   hasError.value ? 'border-danger' : 'focus-visible:border-neutral-400 border-neutral-300',
-])
-</script>
+])</script>
 
 <template>
   <div class="mb-4">
@@ -44,6 +44,8 @@ const controlClass = computed(() => [
       :id="fieldId"
       v-model="model"
       :class="controlClass"
+      :aria-invalid="hasError || undefined"
+      :aria-describedby="hasError ? errorId : undefined"
       v-bind="$attrs"
     >
       <slot />
@@ -54,6 +56,8 @@ const controlClass = computed(() => [
       :id="fieldId"
       v-model="model"
       :class="controlClass"
+      :aria-invalid="hasError || undefined"
+      :aria-describedby="hasError ? errorId : undefined"
       v-bind="$attrs"
     />
 
@@ -63,9 +67,11 @@ const controlClass = computed(() => [
       v-model="model"
       :type="type"
       :class="controlClass"
+      :aria-invalid="hasError || undefined"
+      :aria-describedby="hasError ? errorId : undefined"
       v-bind="$attrs"
     />
 
-    <p v-if="error" class="mt-0.5 font-medium text-xs text-danger">{{ error }}</p>
+    <p v-if="error" :id="errorId" class="mt-0.5 font-medium text-xs text-danger">{{ error }}</p>
   </div>
 </template>

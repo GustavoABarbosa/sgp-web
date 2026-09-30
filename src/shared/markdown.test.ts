@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { applyMarkdownFormat, applyMarkdownIndent, applyMarkdownList, plainTextFromMarkdown, renderMarkdown } from './markdown'
+import {
+  applyMarkdownFormat,
+  applyMarkdownIndent,
+  plainTextFromMarkdown,
+  renderMarkdown,
+  shouldIndentOnTab,
+} from './markdown'
 
 describe('renderMarkdown', () => {
   it('renders bold, italic and inline code', () => {
@@ -30,6 +36,30 @@ describe('renderMarkdown', () => {
     expect(html).not.toContain('<script>')
     expect(html).toContain('&lt;script&gt;')
   })
+
+  it.each([
+    '<img src=x onerror=alert(1)>',
+    '**<img src=x onerror=alert(1)>**',
+    '`<svg onload=alert(1)>`',
+    '```\n<script>alert(1)</script>\n```',
+    '1. <a href="javascript:alert(1)">x</a>',
+    'a) <iframe src="//evil"></iframe>',
+    '"><script>alert(1)</script>',
+  ])('never emits raw tags from user input: %s', (input) => {
+    const container = document.createElement('div')
+    container.innerHTML = renderMarkdown(input)
+    const allowed = new Set(['STRONG', 'EM', 'CODE', 'PRE', 'OL', 'LI', 'SPAN', 'BR'])
+    for (const el of container.querySelectorAll('*')) {
+      expect(allowed.has(el.tagName)).toBe(true)
+      expect([...el.attributes].every((attr) => attr.name === 'class')).toBe(true)
+    }
+  })
+
+  it('does not let code block placeholders be injected from content', () => {
+    const html = renderMarkdown('__CODE_BLOCK_0__\n```\nx\n```')
+    expect(html.startsWith('__CODE_BLOCK_0__')).toBe(true)
+    expect(html.match(/<pre/g)).toHaveLength(1)
+  })
 })
 
 describe('plainTextFromMarkdown', () => {
@@ -55,15 +85,19 @@ describe('applyMarkdownFormat', () => {
   })
 })
 
-describe('applyMarkdownList', () => {
-  it('inserts numeric list for multiple lines', () => {
-    const result = applyMarkdownList('prefix\n', 7, 7, 'numeric')
-    expect(result.value).toBe('prefix\n1. item')
+describe('shouldIndentOnTab', () => {
+  it('indents multi-line selections', () => {
+    expect(shouldIndentOnTab('um\ndois', 0, 7)).toBe(true)
   })
 
-  it('inserts alpha list for selected lines', () => {
-    const result = applyMarkdownList('um\ndois', 0, 7, 'alpha')
-    expect(result.value).toBe('a) um\nb) dois')
+  it('indents list lines', () => {
+    expect(shouldIndentOnTab('1. item', 3, 3)).toBe(true)
+    expect(shouldIndentOnTab('texto\n  a) item', 12, 12)).toBe(true)
+  })
+
+  it('lets Tab move focus on plain text', () => {
+    expect(shouldIndentOnTab('texto comum', 3, 3)).toBe(false)
+    expect(shouldIndentOnTab('', 0, 0)).toBe(false)
   })
 })
 

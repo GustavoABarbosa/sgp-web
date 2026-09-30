@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const examFormSchema = z.object({
   title: z.string().trim().min(1, 'Informe o título'),
-  description: z.string().optional(),
+  description: z.string(),
   questions: z
     .array(
       z.object({

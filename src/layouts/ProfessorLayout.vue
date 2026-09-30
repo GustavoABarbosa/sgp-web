@@ -3,6 +3,7 @@ import { ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
 import { onClickOutside, onKeyStroke } from "@vueuse/core";
 import { useAuthStore } from "@/stores/auth";
+import BaseButton from "@/components/BaseButton.vue";
 import CatolicaIcon from "@/components/CatolicaIcon.vue";
 
 const auth = useAuthStore();
@@ -20,10 +21,11 @@ const links = [
   { to: "/professor/reports", label: "Relatórios" },
 ];
 
+const isActive = (path: string) => route.path.startsWith(path);
 const navLinkClass = (path: string) =>
   [
     "text-white/85 no-underline px-5 py-2.5 text-sm transition-colors hover:bg-white/10 hover:text-white",
-    route.path.startsWith(path) ? "bg-white/10 text-white" : "",
+    isActive(path) ? "bg-white/10 text-white" : "",
   ].join(" ");
 
 async function logout() {
@@ -43,7 +45,7 @@ onKeyStroke("Escape", () => (menuOpen.value = false));
   <div class="flex h-screen flex-col md:flex-row">
     <aside ref="sidebar" class="relative z-40 flex w-full shrink-0 flex-col bg-primary text-white md:w-60 md:py-5">
       <div class="flex items-center gap-2 px-5 py-3 md:mb-3 md:border-b md:border-white/15 md:pb-5 md:pt-0">
-        <CatolicaIcon class="h-8 text-white" />
+        <CatolicaIcon class="h-8 text-white" aria-hidden="true" />
         <div class="flex-1">
           <strong class="block text-lg">SGP Católica</strong>
           <small class="text-xs opacity-75">Área do Professor</small>
@@ -53,6 +55,7 @@ onKeyStroke("Escape", () => (menuOpen.value = false));
           class="rounded-lg p-1.5 hover:bg-white/10 md:hidden"
           :aria-expanded="menuOpen"
           aria-controls="professor-menu"
+          :aria-label="menuOpen ? 'Fechar menu' : 'Abrir menu'"
           :title="menuOpen ? 'Fechar menu' : 'Abrir menu'"
           @click="menuOpen = !menuOpen"
         >
@@ -64,8 +67,14 @@ onKeyStroke("Escape", () => (menuOpen.value = false));
         class="absolute inset-x-0 top-full flex-col border-t border-white/15 bg-primary pb-4 shadow-lg md:static md:flex md:flex-1 md:border-t-0 md:pb-0 md:shadow-none"
         :class="menuOpen ? 'flex' : 'hidden'"
       >
-        <nav class="flex flex-col py-2 md:flex-1 md:py-0">
-          <RouterLink v-for="link in links" :key="link.to" :to="link.to" :class="navLinkClass(link.to)">
+        <nav aria-label="Navegação principal" class="flex flex-col py-2 md:flex-1 md:py-0">
+          <RouterLink
+            v-for="link in links"
+            :key="link.to"
+            :to="link.to"
+            :class="navLinkClass(link.to)"
+            :aria-current="isActive(link.to) ? 'page' : undefined"
+          >
             {{ link.label }}
           </RouterLink>
         </nav>
@@ -73,16 +82,11 @@ onKeyStroke("Escape", () => (menuOpen.value = false));
           <RouterLink to="/professor/profile" class="text-sm text-white/90 no-underline">
             {{ auth.user?.fullName }}
           </RouterLink>
-          <button
-            class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
-            @click="logout"
-          >
-            Sair
-          </button>
+          <BaseButton variant="secondary" size="sm" @click="logout">Sair</BaseButton>
         </div>
       </div>
     </aside>
-    <main class="flex-1 overflow-x-auto p-4 md:p-7">
+    <main id="main-content" tabindex="-1" class="flex-1 overflow-x-auto p-4 focus:outline-none md:p-7">
       <RouterView />
     </main>
   </div>

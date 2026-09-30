@@ -10,7 +10,7 @@ export const TEACHER_EMAIL_DOMAIN = '@catolicasc.org.br'
 export const EMAIL_DOMAINS = [TEACHER_EMAIL_DOMAIN, STUDENT_EMAIL_DOMAIN] as const
 
 export const emailSchema = z.email('E-mail inválido').min(1, REQUIRED('e-mail'))
-export const passwordSchema = z.string().min(8, REQUIRED('senha'))
+export const passwordSchema = z.string().min(8, 'Mínimo de 8 caracteres')
 export const fullNameSchema = z
   .string()
   .trim()

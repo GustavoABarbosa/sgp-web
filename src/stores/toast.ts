@@ -9,39 +9,64 @@ export interface Toast {
   title?: string
   message: string
   duration: number
+  paused: boolean
+}
+
+interface Timer {
+  handle: number
+  startedAt: number
+  remaining: number
 }
 
 const DEFAULT_DURATION = 6000
 
 export const useToastStore = defineStore('toast', () => {
   const toasts = ref<Toast[]>([])
+  const timers = new Map<string, Timer>()
 
   function dismiss(id: string) {
+    const timer = timers.get(id)
+    if (timer) window.clearTimeout(timer.handle)
+    timers.delete(id)
     toasts.value = toasts.value.filter((toast) => toast.id !== id)
   }
 
-  function push(input: {
-    type: ToastType
-    message: string
-    title?: string
-    duration?: number
-  }) {
+  function schedule(id: string, remaining: number) {
+    timers.set(id, {
+      handle: window.setTimeout(() => dismiss(id), remaining),
+      startedAt: Date.now(),
+      remaining,
+    })
+  }
+
+  function setPaused(id: string, paused: boolean) {
+    const toast = toasts.value.find((t) => t.id === id)
+    if (toast) toast.paused = paused
+  }
+
+  function pause(id: string) {
+    const timer = timers.get(id)
+    if (!timer) return
+    window.clearTimeout(timer.handle)
+    timer.remaining -= Date.now() - timer.startedAt
+    setPaused(id, true)
+  }
+
+  function resume(id: string) {
+    const timer = timers.get(id)
+    if (!timer) return
+    schedule(id, Math.max(timer.remaining, 0))
+    setPaused(id, false)
+  }
+
+  function push(input: { type: ToastType; message: string; title?: string; duration?: number }) {
     const id = crypto.randomUUID()
     const duration = input.duration ?? DEFAULT_DURATION
-    const toast: Toast = {
-      id,
-      type: input.type,
-      title: input.title,
-      message: input.message,
-      duration,
-    }
-
-    toasts.value = [...toasts.value, toast]
-
-    if (duration > 0) {
-      window.setTimeout(() => dismiss(id), duration)
-    }
-
+    toasts.value = [
+      ...toasts.value,
+      { id, type: input.type, title: input.title, message: input.message, duration, paused: false },
+    ]
+    if (duration > 0) schedule(id, duration)
     return id
   }
 
@@ -61,5 +86,5 @@ export const useToastStore = defineStore('toast', () => {
     return push({ type: 'warning', message, title })
   }
 
-  return { toasts, push, dismiss, success, error, info, warning }
+  return { toasts, push, dismiss, pause, resume, success, error, info, warning }
 })

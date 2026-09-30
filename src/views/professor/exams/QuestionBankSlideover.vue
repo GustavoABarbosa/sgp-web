@@ -1,12 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { watchDebounced } from "@vueuse/core";
 import type { Question } from "@/types";
-import { plainTextFromMarkdown } from "@/shared/utils";
-import Slideover from "@/components/Slideover.vue";
+import { questionsApi } from "@/api/questions";
+import { errorMessage } from "@/shared/api/client";
+import { plainTextFromMarkdown } from "@/shared/markdown";
+import BaseButton from "@/components/BaseButton.vue";
 import DropdownMenu from "@/components/DropdownMenu.vue";
+import QuestionTypeLabel from "@/components/QuestionTypeLabel.vue";
+import SelectField from "@/components/SelectField.vue";
+import Slideover from "@/components/Slideover.vue";
+import TagList from "@/components/TagList.vue";
+
+const PAGE_SIZE = 20;
+const QUICK_TAG_COUNT = 5;
 
 const props = defineProps<{
-  questions: Question[];
   selectedIds: string[];
   max: number;
 }>();
@@ -20,13 +29,18 @@ const search = ref("");
 const filterType = ref<"" | Question["type"]>("");
 const filterTags = ref<string[]>([]);
 const hideSelected = ref(false);
+const showAllTags = ref(false);
+
+const availableTags = ref<string[]>([]);
+const questions = ref<Question[]>([]);
+const total = ref(0);
+const page = ref(1);
+const loading = ref(false);
+const error = ref("");
+let requestId = 0;
 
 const isFull = computed(() => props.selectedIds.length >= props.max);
-const availableTags = computed(() =>
-  [...new Set(props.questions.flatMap((q) => q.tags))].sort((a, b) => a.localeCompare(b)),
-);
-const QUICK_TAG_COUNT = 5;
-const showAllTags = ref(false);
+const hasMore = computed(() => questions.value.length < total.value);
 const visibleTags = computed(() => {
   if (showAllTags.value) return availableTags.value;
   const tags = availableTags.value.slice(0, QUICK_TAG_COUNT);
@@ -35,19 +49,36 @@ const visibleTags = computed(() => {
 const activeFilterCount = computed(
   () => Number(!!filterType.value) + filterTags.value.length + Number(hideSelected.value),
 );
+const visibleQuestions = computed(() =>
+  hideSelected.value ? questions.value.filter((q) => !isSelected(q.id)) : questions.value,
+);
 
-const filteredQuestions = computed(() => {
-  const searchValue = search.value.trim().toLowerCase();
-  return props.questions.filter(
-    (question) =>
-      !(hideSelected.value && isSelected(question.id)) &&
-      (!filterType.value || question.type === filterType.value) &&
-      (!filterTags.value.length || filterTags.value.some((tag) => question.tags.includes(tag))) &&
-      (!searchValue ||
-        plainTextFromMarkdown(question.statement).toLowerCase().includes(searchValue) ||
-        question.tags.some((tag) => tag.toLowerCase().includes(searchValue))),
-  );
-});
+async function fetchPage(next: number) {
+  const id = ++requestId;
+  loading.value = true;
+  error.value = "";
+  try {
+    const result = await questionsApi.list({
+      search: search.value.trim(),
+      type: filterType.value,
+      tags: filterTags.value,
+      page: next,
+      limit: PAGE_SIZE,
+    });
+    if (id !== requestId) return;
+    questions.value = next === 1 ? result.data : [...questions.value, ...result.data];
+    total.value = result.total;
+    page.value = next;
+  } catch (e) {
+    if (id === requestId) error.value = errorMessage(e, "Erro ao carregar questões");
+  } finally {
+    if (id === requestId) loading.value = false;
+  }
+}
+
+async function loadTags() {
+  availableTags.value = await questionsApi.tags().catch(() => []);
+}
 
 function isSelected(id: string) {
   return props.selectedIds.includes(id);
@@ -67,19 +98,30 @@ function clearFilters() {
   hideSelected.value = false;
 }
 
+function add(question: Question) {
+  if (!isSelected(question.id) && !isFull.value) emit("add", question);
+}
+
 watch(open, (value) => {
-  if (value) return;
+  if (value) {
+    loadTags();
+    fetchPage(1);
+    return;
+  }
   search.value = "";
   showAllTags.value = false;
   clearFilters();
 });
+watch([filterType, filterTags], () => open.value && fetchPage(1));
+watchDebounced(search, () => open.value && fetchPage(1), { debounce: 300 });
 </script>
 
 <template>
   <Slideover v-model="open" title="Banco de questões">
     <template #header>
       <div class="flex items-center gap-2">
-        <div class="relative flex-1">
+        <label class="relative flex-1">
+          <span class="sr-only">Buscar por enunciado ou tag</span>
           <Icon
             name="ph:magnifying-glass"
             class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
@@ -90,15 +132,13 @@ watch(open, (value) => {
             placeholder="Buscar por enunciado ou tag"
             class="w-full rounded-lg border border-border bg-white py-2 pl-9 pr-3"
           />
-        </div>
-        <DropdownMenu>
-          <template #trigger="{ open: menuOpen, toggle }">
+        </label>
+        <DropdownMenu label="Filtros" panel>
+          <template #trigger="{ triggerAttrs }">
             <button
               type="button"
               class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 text-sm font-medium text-text hover:bg-page"
-              :aria-expanded="menuOpen"
-              aria-haspopup="menu"
-              @click.stop="toggle"
+              v-bind="triggerAttrs"
             >
               <Icon name="ph:funnel" class="size-4" />
               Filtros
@@ -107,27 +147,16 @@ watch(open, (value) => {
                 class="flex size-5 items-center justify-center rounded-full bg-primary text-xs text-white"
               >
                 {{ activeFilterCount }}
+                <span class="sr-only">ativos</span>
               </span>
             </button>
           </template>
           <div class="w-64 space-y-3 px-3 py-2">
-            <label class="block text-sm">
-              <span class="mb-1 block font-medium">Tipo</span>
-              <div class="relative">
-                <select
-                  v-model="filterType"
-                  class="w-full appearance-none bg-none rounded-lg border border-border bg-white py-1.5 pl-3 pr-10"
-                >
-                  <option value="">Todos os tipos</option>
-                  <option value="objetiva">Objetiva</option>
-                  <option value="discursiva">Discursiva</option>
-                </select>
-                <Icon
-                  name="ph:caret-down"
-                  class="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted"
-                />
-              </div>
-            </label>
+            <SelectField v-model="filterType" label="Tipo" class="py-1.5!">
+              <option value="">Todos os tipos</option>
+              <option value="objetiva">Objetiva</option>
+              <option value="discursiva">Discursiva</option>
+            </SelectField>
             <fieldset class="text-sm">
               <legend class="mb-1 font-medium">Tags</legend>
               <div class="max-h-48 space-y-0.5 overflow-y-auto rounded-lg border border-border bg-white p-1">
@@ -146,17 +175,13 @@ watch(open, (value) => {
               <span class="font-medium">Ocultar selecionadas</span>
               <input v-model="hideSelected" type="checkbox" role="switch" class="peer sr-only" />
               <span
+                aria-hidden="true"
                 class="relative h-5 w-9 shrink-0 rounded-full bg-border transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-primary/40"
               />
             </label>
-            <button
-              type="button"
-              class="w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text hover:bg-page disabled:cursor-not-allowed disabled:opacity-55"
-              :disabled="!activeFilterCount"
-              @click="clearFilters"
-            >
+            <BaseButton variant="secondary" block :disabled="!activeFilterCount" @click="clearFilters">
               Limpar filtros
-            </button>
+            </BaseButton>
           </div>
         </DropdownMenu>
       </div>
@@ -182,7 +207,9 @@ watch(open, (value) => {
           v-if="availableTags.length > QUICK_TAG_COUNT"
           type="button"
           class="inline-flex shrink-0 items-center rounded-lg border border-border bg-white p-1.5 text-text hover:bg-page"
+          :aria-label="showAllTags ? 'Mostrar menos tags' : 'Mostrar todas as tags'"
           :title="showAllTags ? 'Mostrar menos tags' : 'Mostrar todas as tags'"
+          :aria-expanded="showAllTags"
           @click="showAllTags = !showAllTags"
         >
           <Icon :name="showAllTags ? 'ph:minus' : 'ph:plus'" class="size-3.5" />
@@ -190,64 +217,54 @@ watch(open, (value) => {
       </div>
     </template>
 
-    <ul v-if="filteredQuestions.length" class="space-y-1">
+    <p v-if="error" role="alert" class="text-sm text-danger">{{ error }}</p>
+    <ul v-if="visibleQuestions.length" class="space-y-1">
       <li
-        v-for="q in filteredQuestions"
+        v-for="q in visibleQuestions"
         :key="q.id"
-        class="flex items-start gap-3 p-3 border border-border rounded-lg transition-colors duration-200"
-        :class="[ isSelected(q.id) ? 'opacity-60': 'hover:bg-page cursor-pointer' ]"
-        @click="isSelected(q.id) ? null : emit('add', q)"
+        class="flex items-start gap-3 rounded-lg border border-border p-3 transition-colors duration-200"
+        :class="[isSelected(q.id) ? 'opacity-60' : 'cursor-pointer hover:bg-page']"
+        @click="add(q)"
       >
         <div class="min-w-0 flex-1">
           <p class="line-clamp-2 text-sm text-text" :title="plainTextFromMarkdown(q.statement)">
             {{ plainTextFromMarkdown(q.statement) }}
           </p>
           <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
-            <span class="inline-flex items-center gap-1 capitalize">
-              <Icon :name="q.type === 'objetiva' ? 'ph:check-circle' : 'ph:pencil-simple-line'" class="size-4" />
-              {{ q.type }}
-            </span>
-            <span
-              v-for="tag in q.tags"
-              :key="tag"
-              class="rounded-lg border border-border bg-page px-2 py-0.5 font-medium capitalize text-text"
-            >
-              {{ tag }}
-            </span>
+            <QuestionTypeLabel :type="q.type" />
+            <TagList :tags="q.tags" />
           </div>
         </div>
-        <button
+        <span
           v-if="isSelected(q.id)"
-          type="button"
-          disabled
-          class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-page px-2.5 py-1 text-xs font-medium text-muted cursor-default!"
+          class="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-page px-2.5 py-1 text-xs font-medium text-muted"
         >
           <Icon name="ph:check" class="size-3.5" />
-        </button>
+          <span class="sr-only">Selecionada</span>
+        </span>
         <button
           v-else
           type="button"
           :disabled="isFull"
           class="inline-flex shrink-0 items-center gap-1 rounded-lg bg-primary px-2.5 py-1 text-xs font-medium text-white hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-55"
-          @click="emit('add', q)"
+          :aria-label="`Adicionar questão: ${plainTextFromMarkdown(q.statement).slice(0, 80)}`"
+          @click.stop="add(q)"
         >
           <Icon name="ph:plus-bold" class="size-3.5" />
         </button>
       </li>
     </ul>
-    <p v-else class="text-sm text-muted">Nenhuma questão encontrada</p>
+    <p v-else-if="!loading && !error" class="text-sm text-muted">Nenhuma questão encontrada</p>
+    <p v-if="loading" class="py-4 text-center text-sm text-muted">Carregando...</p>
+    <div v-else-if="hasMore" class="mt-3 flex justify-center">
+      <BaseButton variant="secondary" size="sm" @click="fetchPage(page + 1)">Carregar mais</BaseButton>
+    </div>
 
     <template #footer="{ close }">
-      <span class="mr-auto text-sm" :class="isFull ? 'text-warning' : 'text-muted'">
+      <span class="mr-auto text-sm" :class="isFull ? 'text-warning' : 'text-muted'" aria-live="polite">
         {{ selectedIds.length }}/{{ max }} selecionadas{{ isFull ? " — limite atingido" : "" }}
       </span>
-      <button
-        type="button"
-        class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light"
-        @click="close"
-      >
-        Concluir
-      </button>
+      <BaseButton @click="close">Concluir</BaseButton>
     </template>
   </Slideover>
 </template>

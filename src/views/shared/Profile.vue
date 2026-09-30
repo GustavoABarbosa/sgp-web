@@ -1,97 +1,100 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
-import { mockApi, isApiError } from "@/mock/mockApi";
-import ConfirmModal from "@/components/ConfirmModal.vue";
-import Breadcrumb from "@/components/Breadcrumb.vue";
+import { useToastStore } from "@/stores/toast";
+import { devApi } from "@/api/dev";
+import { errorMessage } from "@/shared/api/client";
+import { MOCKS_ENABLED } from "@/shared/env";
+import { useConfirm } from "@/shared/useConfirm";
+import BaseButton from "@/components/BaseButton.vue";
+import BaseCard from "@/components/BaseCard.vue";
+import PageHeader from "@/components/PageHeader.vue";
 
 const auth = useAuthStore();
+const toast = useToastStore();
 const router = useRouter();
-const showAnonymize = ref(false);
-const message = ref("");
-const error = ref("");
+const confirm = useConfirm();
 
-const profileData = ref([
-  {
-    icon: "ph:user",
-    label: "Nome",
-    value: auth.user?.fullName,
-  },
-  {
-    icon: "ph:at",
-    label: "E-mail",
-    value: auth.user?.email,
-  },
-  {
-    icon: "ph:user-circle",
-    label: "Tipo",
-    value: auth.user?.role === "professor" ? "Professor" : "Aluno",
-  },
+const profileData = computed(() => [
+  { icon: "ph:user", label: "Nome", value: auth.user?.fullName ?? "" },
+  { icon: "ph:at", label: "E-mail", value: auth.user?.email ?? "" },
+  { icon: "ph:user-circle", label: "Tipo", value: auth.isProfessor ? "Professor" : "Aluno" },
 ]);
 
 async function logoutAll() {
-  await auth.logoutAll();
-  router.push("/login");
+  try {
+    await auth.logoutAll();
+    router.push("/login");
+  } catch (e) {
+    toast.error(errorMessage(e, "Erro ao encerrar sessões"));
+  }
 }
 
-async function confirmAnonymize() {
+async function anonymize() {
+  const ok = await confirm({
+    title: "Confirmar anonimização",
+    message: "Esta ação não pode ser desfeita. Deseja continuar?",
+    confirmLabel: "Anonimizar",
+  });
+  if (!ok) return;
   try {
     await auth.anonymize();
     router.push("/login");
   } catch (e) {
-    error.value = isApiError(e) ? e.message : "Erro";
+    toast.error(errorMessage(e, "Erro ao anonimizar conta"));
   }
 }
 
-function resetMockData() {
-  mockApi.reset();
-  message.value = "Dados mock resetados. Faça login novamente.";
-  auth.logout();
-  router.push("/login");
+async function resetMockData() {
+  const ok = await confirm({
+    title: "Resetar dados mock",
+    message: "Todos os dados locais serão restaurados e você precisará entrar novamente.",
+    confirmLabel: "Resetar",
+  });
+  if (!ok) return;
+  try {
+    await devApi.resetMockData();
+    auth.clear();
+    toast.success("Dados mock resetados. Faça login novamente.");
+    router.push("/login");
+  } catch (e) {
+    toast.error(errorMessage(e, "Erro ao resetar dados"));
+  }
 }
 </script>
 
 <template>
   <div>
-    <Breadcrumb class="mb-6" :items="[{ label: 'Meu perfil' }]" />
+    <PageHeader :items="[{ label: 'Meu perfil' }]" />
 
-    <div class="rounded-lg border border-border bg-surface p-5 shadow-sm">
+    <BaseCard>
       <h2 class="mb-2">Dados pessoais</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+      <dl class="m-0 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
         <div
           v-for="item in profileData"
           :key="item.label"
           class="flex min-w-0 items-center gap-1 overflow-hidden rounded-lg border border-border p-2"
         >
-          <Icon :name="item.icon" class="size-8 shrink-0 text-muted" />
+          <Icon :name="item.icon" class="size-8 shrink-0 text-muted" aria-hidden="true" />
           <div class="min-w-0 flex-1">
-            <p class="text-xs leading-tight text-muted">{{ item.label }}</p>
-            <p class="truncate text-xs font-medium leading-tight" :title="String(item.value ?? '')">
-              {{ item.value }}
-            </p>
+            <dt class="text-xs leading-tight text-muted">{{ item.label }}</dt>
+            <dd class="m-0 truncate text-xs font-medium leading-tight" :title="item.value">{{ item.value }}</dd>
           </div>
         </div>
-      </div>
-    </div>
+      </dl>
+    </BaseCard>
 
-    <div
-      class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-    >
+    <BaseCard class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2>Sessões</h2>
         <p class="text-sm text-muted">Encerre todas as sessões ativas em outros dispositivos.</p>
       </div>
-      <button
-        class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
-        @click="logoutAll"
-      >
-        Sair de todos os dispositivos
-      </button>
-    </div>
+      <BaseButton variant="secondary" @click="logoutAll">Sair de todos os dispositivos</BaseButton>
+    </BaseCard>
 
-    <div
-      class="mt-4 rounded-lg border border-danger/30 bg-danger/5 p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+    <section
+      class="mt-4 flex flex-col gap-4 rounded-lg border border-danger/30 bg-danger/5 p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
     >
       <div>
         <h2>Privacidade (LGPD)</h2>
@@ -100,38 +103,15 @@ function resetMockData() {
           serão substituídos por placeholders.
         </p>
       </div>
-      <button
-        class="shrink-0 rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-        @click="showAnonymize = true"
-      >
-        Anonimizar minha conta
-      </button>
-    </div>
+      <BaseButton variant="danger" class="shrink-0" @click="anonymize">Anonimizar minha conta</BaseButton>
+    </section>
 
-    <div
-      class="mt-4 rounded-lg border border-border bg-surface p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-    >
+    <BaseCard v-if="MOCKS_ENABLED" class="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h2>Desenvolvimento</h2>
         <p class="mb-3 text-sm text-muted">Restaura os dados mock iniciais.</p>
       </div>
-      <button
-        class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-page"
-        @click="resetMockData"
-      >
-        Resetar dados mock
-      </button>
-      <p v-if="message" class="mt-2 text-sm text-success">{{ message }}</p>
-    </div>
-
-    <ConfirmModal
-      v-model="showAnonymize"
-      title="Confirmar anonimização"
-      @cancel="error = ''"
-      @confirm="confirmAnonymize"
-    >
-      <p>Esta ação não pode ser desfeita. Deseja continuar?</p>
-      <p v-if="error" class="text-sm text-danger">{{ error }}</p>
-    </ConfirmModal>
+      <BaseButton variant="secondary" @click="resetMockData">Resetar dados mock</BaseButton>
+    </BaseCard>
   </div>
 </template>

@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, reactive, ref, toRef } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { insertNodeAt, removeNode, useSortable } from "@vueuse/integrations/useSortable";
 import type { ExamQuestion, Question } from "@/types";
-import { mockApi, isApiError } from "@/mock/mockApi";
+import { examsApi } from "@/api/exams";
+import { questionsApi } from "@/api/questions";
+import { errorMessage } from "@/shared/api/client";
+import { plainTextFromMarkdown } from "@/shared/markdown";
+import { examFormSchema, useZodForm } from "@/shared/validation";
+import BaseButton from "@/components/BaseButton.vue";
 import FormField from "@/components/FormField.vue";
-import Breadcrumb from "@/components/Breadcrumb.vue";
-import { examFormSchema, getZodFieldErrors } from "@/shared/validation";
+import LoadingState from "@/components/LoadingState.vue";
+import PageHeader from "@/components/PageHeader.vue";
 import QuestionBankSlideover from "./QuestionBankSlideover.vue";
 import QuestionViewModal from "../questions/QuestionViewModal.vue";
 
@@ -14,53 +19,87 @@ const MAX_QUESTIONS = 20;
 
 const route = useRoute();
 const router = useRouter();
-const isEdit = computed(() => !!route.params.id);
+const examId = route.params.id ? String(route.params.id) : null;
 
-const title = ref("");
-const description = ref("");
-const selectedQuestions = ref<ExamQuestion[]>([]);
-const availableQuestions = ref<Question[]>([]);
+const { fields, validate, errorFor, reset } = useZodForm(examFormSchema, {
+  title: "",
+  description: "",
+  questions: [] as ExamQuestion[],
+});
+const questionsById = reactive(new Map<string, Question>());
 const targetTotal = ref(10);
+const loading = ref(!!examId);
+const loadError = ref("");
 const error = ref("");
-const fieldErrors = ref<Partial<Record<string, string>>>({});
+const saving = ref(false);
 const showQuestionBank = ref(false);
 const viewing = ref<Question | null>(null);
 const showViewModal = ref(false);
+const announcement = ref("");
 
-const selectedIds = computed(() => selectedQuestions.value.map((q) => q.questionId));
-const totalScore = computed(() => selectedQuestions.value.reduce((s, q) => s + q.score, 0));
+const selectedIds = computed(() => fields.questions.map((q) => q.questionId));
+const totalScore = computed(() => fields.questions.reduce((s, q) => s + q.score, 0));
 const scoreWarning = computed(() => Math.abs(totalScore.value - targetTotal.value) > 0.01);
 
 async function load() {
-  availableQuestions.value = (await mockApi.listQuestions({})).data;
-  if (isEdit.value) {
-    const exam = await mockApi.getExam(String(route.params.id));
-    title.value = exam.title;
-    description.value = exam.description ?? "";
-    selectedQuestions.value = [...exam.questions].sort((a, b) => a.order - b.order);
+  if (!examId) return;
+  try {
+    const exam = await examsApi.get(examId);
+    const ids = exam.questions.map((q) => q.questionId);
+    if (ids.length) {
+      const { data } = await questionsApi.list({ ids, limit: MAX_QUESTIONS });
+      data.forEach((q) => questionsById.set(q.id, q));
+    }
+    reset({
+      title: exam.title,
+      description: exam.description ?? "",
+      questions: [...exam.questions].sort((a, b) => a.order - b.order),
+    });
+  } catch (e) {
+    loadError.value = errorMessage(e, "Erro ao carregar prova");
+  } finally {
+    loading.value = false;
   }
 }
 
+function renumber(list: ExamQuestion[]) {
+  fields.questions = list.map((q, i) => ({ ...q, order: i + 1 }));
+}
+
 function addQuestion(q: Question) {
-  if (selectedQuestions.value.length >= MAX_QUESTIONS) return;
-  if (selectedQuestions.value.some((x) => x.questionId === q.id)) return;
-  error.value = "";
-  selectedQuestions.value.push({
-    questionId: q.id,
-    order: selectedQuestions.value.length + 1,
-    score: q.type === "discursiva" ? (q.maxScore ?? 5) : 2,
-  });
+  if (fields.questions.length >= MAX_QUESTIONS || selectedIds.value.includes(q.id)) return;
+  questionsById.set(q.id, q);
+  renumber([
+    ...fields.questions,
+    { questionId: q.id, order: 0, score: q.type === "discursiva" ? (q.maxScore ?? 5) : 2 },
+  ]);
 }
 
 function removeQuestion(questionId: string) {
-  selectedQuestions.value = selectedQuestions.value
-    .filter((q) => q.questionId !== questionId)
-    .map((q, i) => ({ ...q, order: i + 1 }));
+  renumber(fields.questions.filter((q) => q.questionId !== questionId));
+}
+
+function move(from: number, to: number) {
+  if (to < 0 || to >= fields.questions.length) return;
+  const list = [...fields.questions];
+  const [moved] = list.splice(from, 1);
+  list.splice(to, 0, moved!);
+  renumber(list);
+}
+
+async function onHandleKeydown(event: KeyboardEvent, index: number) {
+  const target = { ArrowUp: index - 1, ArrowDown: index + 1 }[event.key];
+  if (target === undefined || target < 0 || target >= fields.questions.length) return;
+  event.preventDefault();
+  move(index, target);
+  announcement.value = `Questão movida para a posição ${target + 1} de ${fields.questions.length}`;
+  await nextTick();
+  questionListEl.value?.querySelectorAll<HTMLElement>("[data-drag-handle]")[target]?.focus();
 }
 
 const questionListEl = ref<HTMLElement | null>(null);
 
-useSortable(questionListEl, selectedQuestions, {
+useSortable(questionListEl, toRef(fields, "questions"), {
   watchElement: true,
   handle: "[data-drag-handle]",
   animation: 150,
@@ -71,46 +110,37 @@ useSortable(questionListEl, selectedQuestions, {
     // Sortable already moved the node; restore it so Vue stays the owner of the DOM order.
     removeNode(e.item);
     insertNodeAt(e.from, e.item, oldIndex);
-    const arr = [...selectedQuestions.value];
-    const [moved] = arr.splice(oldIndex, 1);
-    arr.splice(newIndex, 0, moved!);
-    selectedQuestions.value = arr.map((q, i) => ({ ...q, order: i + 1 }));
+    move(oldIndex, newIndex);
   },
 });
 
 function viewQuestion(id: string) {
-  viewing.value = availableQuestions.value.find((q) => q.id === id) ?? null;
+  viewing.value = questionsById.get(id) ?? null;
   showViewModal.value = !!viewing.value;
 }
 
 function questionLabel(id: string) {
-  const q = availableQuestions.value.find((x) => x.id === id);
-  return q ? q.statement : id;
+  const q = questionsById.get(id);
+  return q ? plainTextFromMarkdown(q.statement) : "Questão indisponível";
 }
 
 async function submit() {
   error.value = "";
-  fieldErrors.value = {};
-
-  const result = examFormSchema.safeParse({
-    title: title.value,
-    description: description.value,
-    questions: selectedQuestions.value,
-  });
-
-  if (!result.success) {
-    fieldErrors.value = getZodFieldErrors(result.error);
-    error.value = result.error.issues[0]?.message ?? "Dados inválidos";
+  const data = validate();
+  if (!data) {
+    error.value = errorFor("questions");
     return;
   }
 
+  saving.value = true;
   try {
-    const payload = result.data;
-    if (isEdit.value) await mockApi.updateExam(String(route.params.id), payload);
-    else await mockApi.createExam(payload);
+    if (examId) await examsApi.update(examId, data);
+    else await examsApi.create(data);
     router.push("/professor/exams");
   } catch (e) {
-    error.value = isApiError(e) ? e.message : "Erro";
+    error.value = errorMessage(e, "Erro ao salvar prova");
+  } finally {
+    saving.value = false;
   }
 }
 
@@ -119,23 +149,27 @@ onMounted(load);
 
 <template>
   <div>
-    <Breadcrumb
-      class="mb-6"
-      :items="[{ label: 'Provas', to: '/professor/exams' }, { label: isEdit ? 'Editar prova' : 'Nova prova' }]"
+    <PageHeader
+      :items="[{ label: 'Provas', to: '/professor/exams' }, { label: examId ? 'Editar prova' : 'Nova prova' }]"
     />
 
-    <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
-      <FormField v-model="title" label="Título" :error="fieldErrors.title" />
-      <FormField v-model="description" as="textarea" label="Descrição" rows="2" />
+    <LoadingState :loading="loading" :message="loadError" />
+
+    <form
+      v-if="!loading && !loadError"
+      class="rounded-lg border border-border bg-surface p-5 shadow-sm"
+      novalidate
+      @submit.prevent="submit"
+    >
+      <FormField v-model="fields.title" label="Título" :error="errorFor('title')" />
+      <FormField v-model="fields.description" as="textarea" label="Descrição" rows="2" />
 
       <div
         class="mb-4 flex flex-wrap items-center gap-4 rounded-lg bg-page p-3 text-sm"
         :class="scoreWarning ? 'border border-warning text-warning' : ''"
       >
-        <span
-          >Total: <strong>{{ totalScore.toFixed(1) }}</strong> pts</span
-        >
-        <span>
+        <span>Total: <strong>{{ totalScore.toFixed(1) }}</strong> pts</span>
+        <label>
           Meta desejada:
           <input
             v-model.number="targetTotal"
@@ -144,24 +178,18 @@ onMounted(load);
             class="w-20 rounded-lg border border-border bg-white px-2 py-1"
           />
           pts
-        </span>
-        <span v-if="scoreWarning">A soma não coincide com a meta (responsabilidade do professor)</span>
+        </label>
+        <span v-if="scoreWarning" role="status">A soma não coincide com a meta (responsabilidade do professor)</span>
       </div>
 
       <div class="mb-3 flex items-center justify-between gap-4">
-        <h2 class="mb-0">Questões selecionadas ({{ selectedQuestions.length }}/{{ MAX_QUESTIONS }})</h2>
-        <button
-          type="button"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-light"
-          @click="showQuestionBank = true"
-        >
-          <Icon name="ph:plus" class="size-4" />
-          Adicionar questão
-        </button>
+        <h2 class="mb-0">Questões selecionadas ({{ fields.questions.length }}/{{ MAX_QUESTIONS }})</h2>
+        <BaseButton icon="ph:plus" class="px-3! py-1.5!" @click="showQuestionBank = true">Adicionar questão</BaseButton>
       </div>
-      <div v-if="selectedQuestions.length" ref="questionListEl" class="mb-4">
-        <div
-          v-for="eq in selectedQuestions"
+      <p class="sr-only" aria-live="assertive">{{ announcement }}</p>
+      <ol v-if="fields.questions.length" ref="questionListEl" class="mb-4 list-none p-0">
+        <li
+          v-for="(eq, index) in fields.questions"
           :key="eq.questionId"
           class="flex flex-wrap items-center gap-2 border-b border-border bg-surface py-2"
         >
@@ -169,64 +197,60 @@ onMounted(load);
             type="button"
             data-drag-handle
             class="cursor-grab rounded p-1 text-muted hover:bg-page hover:text-text active:cursor-grabbing"
-            title="Arraste para reordenar"
+            :aria-label="`Reordenar questão ${eq.order}. Use as setas para cima e para baixo.`"
+            title="Arraste ou use as setas para reordenar"
+            @keydown="onHandleKeydown($event, index)"
           >
             <Icon name="ph:dots-six-vertical-bold" class="size-4" />
           </button>
           <span
             class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-white"
+            aria-hidden="true"
           >
             {{ eq.order }}
           </span>
-          <div class="min-w-0 flex-1 truncate">
-            <span class="">{{ questionLabel(eq.questionId) }}</span>
+          <div class="min-w-0 flex-1 truncate" :title="questionLabel(eq.questionId)">
+            {{ questionLabel(eq.questionId) }}
           </div>
-          <button
-            type="button"
-            class="rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-text hover:bg-page"
+          <BaseButton
+            variant="secondary"
+            size="sm"
+            icon="ph:eye"
+            :aria-label="`Visualizar questão ${eq.order}`"
             title="Visualizar"
             @click="viewQuestion(eq.questionId)"
-          >
-            <Icon name="ph:eye" class="size-4" />
-          </button>
-          <input
-            v-model.number="eq.score"
-            type="number"
-            step="0.5"
-            min="0"
-            class="w-16 rounded-lg border border-border bg-white px-2 py-1"
           />
-          <button
-            type="button"
-            class="rounded-lg bg-danger px-2.5 py-1 text-xs font-medium text-white hover:bg-red-700"
+          <label class="flex items-center">
+            <span class="sr-only">Pontuação da questão {{ eq.order }}</span>
+            <input
+              v-model.number="eq.score"
+              type="number"
+              step="0.5"
+              min="0"
+              class="w-16 rounded-lg border border-border bg-white px-2 py-1"
+            />
+          </label>
+          <BaseButton
+            variant="danger"
+            size="sm"
+            icon="ph:x-bold"
+            :aria-label="`Remover questão ${eq.order}`"
+            title="Remover"
             @click="removeQuestion(eq.questionId)"
-          >
-            <Icon name="ph:x-bold" class="size-3.5" />
-          </button>
-        </div>
-      </div>
+          />
+        </li>
+      </ol>
       <p v-else class="text-sm text-muted">Nenhuma questão adicionada</p>
 
-      <p v-if="error" class="mt-4 text-sm text-danger">{{ error }}</p>
+      <p v-if="error" role="alert" class="mt-4 text-sm text-danger">{{ error }}</p>
       <div class="mt-4 flex flex-wrap gap-2">
-        <RouterLink
-          to="/professor/exams"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
-        >
-          Cancelar
-        </RouterLink>
-        <button
-          type="submit"
-          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light"
-        >
-          Salvar prova
-        </button>
+        <BaseButton variant="secondary" to="/professor/exams">Cancelar</BaseButton>
+        <BaseButton type="submit" :loading="saving">Salvar prova</BaseButton>
       </div>
     </form>
 
     <QuestionBankSlideover
       v-model="showQuestionBank"
-      :questions="availableQuestions"
       :selected-ids="selectedIds"
       :max="MAX_QUESTIONS"
       @add="addQuestion"

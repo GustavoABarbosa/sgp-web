@@ -1,69 +1,74 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
-import type { Class, Exam } from "@/types";
-import { mockApi, isApiError } from "@/mock/mockApi";
-import FormField from "@/components/FormField.vue";
-import Breadcrumb from "@/components/Breadcrumb.vue";
+import { applicationsApi } from "@/api/applications";
+import { classesApi } from "@/api/classes";
+import { examsApi } from "@/api/exams";
+import { errorMessage } from "@/shared/api/client";
+import { useResource } from "@/shared/useResource";
+import { statusLabel } from "@/shared/utils";
 import { applicationFormSchema, useZodForm } from "@/shared/validation";
+import BaseButton from "@/components/BaseButton.vue";
+import FormField from "@/components/FormField.vue";
+import LoadingState from "@/components/LoadingState.vue";
+import PageHeader from "@/components/PageHeader.vue";
 
 const router = useRouter();
-const exams = ref<Exam[]>([]);
-const classes = ref<Class[]>([]);
+const { data: options, isLoading, error: loadError } = useResource(async () => {
+  const [exams, classes] = await Promise.all([examsApi.list(), classesApi.list({ status: "active" })]);
+  return { exams: exams.filter((e) => e.status !== "closed"), classes };
+});
+const exams = computed(() => options.value?.exams ?? []);
+const classes = computed(() => options.value?.classes ?? []);
+
 const { fields, validate, errorFor } = useZodForm(applicationFormSchema, {
   examId: "",
   classId: "",
 });
 const error = ref("");
-
-onMounted(async () => {
-  exams.value = (await mockApi.listExams()).filter((e) => e.status !== "closed");
-  classes.value = await mockApi.listClasses({ status: "active" });
-});
+const saving = ref(false);
 
 async function submit() {
   error.value = "";
   const data = validate();
   if (!data) return;
 
+  saving.value = true;
   try {
-    const app = await mockApi.createApplication(data.examId, data.classId);
+    const app = await applicationsApi.create(data);
     router.push(`/professor/applications/${app.id}`);
   } catch (e) {
-    error.value = isApiError(e) ? e.message : "Erro";
+    error.value = errorMessage(e, "Erro ao criar aplicação");
+  } finally {
+    saving.value = false;
   }
 }
 </script>
 
 <template>
   <div>
-    <Breadcrumb
-      class="mb-6"
-      :items="[{ label: 'Aplicações', to: '/professor/applications' }, { label: 'Nova aplicação' }]"
-    />
-    <form class="rounded-lg border border-border bg-surface p-5 shadow-sm" @submit.prevent="submit">
+    <PageHeader :items="[{ label: 'Aplicações', to: '/professor/applications' }, { label: 'Nova aplicação' }]" />
+
+    <LoadingState :loading="isLoading && !options" :message="loadError" />
+
+    <form
+      v-if="options"
+      class="rounded-lg border border-border bg-surface p-5 shadow-sm"
+      novalidate
+      @submit.prevent="submit"
+    >
       <FormField v-model="fields.examId" as="select" label="Prova" :error="errorFor('examId')">
         <option value="" disabled>Selecione...</option>
-        <option v-for="e in exams" :key="e.id" :value="e.id">{{ e.title }} ({{ e.status }})</option>
+        <option v-for="e in exams" :key="e.id" :value="e.id">{{ e.title }} ({{ statusLabel(e.status) }})</option>
       </FormField>
       <FormField v-model="fields.classId" as="select" label="Turma" :error="errorFor('classId')">
         <option value="" disabled>Selecione...</option>
         <option v-for="c in classes" :key="c.id" :value="c.id">{{ c.name }} — {{ c.subject }}</option>
       </FormField>
-      <p v-if="error" class="text-sm text-danger">{{ error }}</p>
+      <p v-if="error" role="alert" class="text-sm text-danger">{{ error }}</p>
       <div class="mt-4 flex flex-wrap gap-2">
-        <RouterLink
-          to="/professor/applications"
-          class="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text no-underline hover:bg-page"
-        >
-          Cancelar
-        </RouterLink>
-        <button
-          type="submit"
-          class="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-light"
-        >
-          Criar aplicação
-        </button>
+        <BaseButton variant="secondary" to="/professor/applications">Cancelar</BaseButton>
+        <BaseButton type="submit" :loading="saving">Criar aplicação</BaseButton>
       </div>
     </form>
   </div>
